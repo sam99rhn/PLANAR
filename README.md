@@ -2,23 +2,69 @@
 
 A web-based tool for drawing and manipulating planar triangulated graphs with dynamic vertex addition.
 
-## Features
+How to Use
+Getting Started
+Click "Start Graph" to initialize with a basic triangle
 
-- Draw planar triangulated graphs
-- Dynamically add vertices to the periphery
-- Zoom and pan functionality
-- Toggle between color and index display
-- Support for up to 10,000 vertices
+Use "Add Vertex" to manually add vertices by selecting two peripheral vertices
 
-## How to Use
+Use "Random Vertex" for automatic vertex addition between random peripheral vertices
 
-1. Click "S: Start Graph" to initialize with a basic triangle
-2. Use "A: Add Vertex" to manually add vertices by selecting two peripheral vertices
-3. Use "R: Add Random Vertex" to add a vertex at a random position
-4. Use the zoom buttons or mouse wheel to zoom in/out
-5. Click and drag to pan the view
-6. Use "C: Center Graph" to reset the view
+Navigation
+Pan: Click and drag anywhere on the canvas
 
-## Deployment
+Zoom: Use mouse wheel or the Zoom In/Out buttons
 
-This application is automatically deployed to GitHub Pages when changes are pushed to the main branch.
+Center View: Click the "Center" button to reset the view
+
+Go to Vertex: Enter a vertex index and click "Go to Vertex"
+
+Display Options
+Toggle Display: Switch between showing vertex indices and color values
+
+Theme Toggle: Switch between dark and light mode using the sun/moon icon
+
+Controls Layout
+Top Bar
+Start Graph
+
+Random Vertex
+
+Add Vertex
+
+Theme Toggle
+
+Right Side
+Toggle Display
+
+Bottom Center
+Zoom In
+
+Zoom Out
+
+Center View
+
+Left Side
+Vertex index input
+
+Go to Vertex button
+
+Bottom Right
+Tutorial button (question mark icon)
+
+Technical Details
+Graph Representation
+The application represents graphs using:
+
+Vertex list with properties (position, index, color, colorValue)
+
+Edge list connecting vertices
+
+Periphery tracking for proper vertex addition
+
+Algorithms
+Planar graph maintenance with triangulation
+
+Curved edge rendering for visual clarity
+
+Automatic vertex placement with periphery consideration
