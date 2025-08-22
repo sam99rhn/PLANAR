@@ -1,891 +1,964 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>PLANAR — Triangulated Graph Builder (optimized)</title>
-<style>
-:root{
-  --bg:#0e0f12; --panel:#16181d; --ink:#eaeef5; --muted:#9aa3b2; --accent:#6aa6ff; --ok:#37d67a; --warn:#ffb020; --bad:#ff5c5c;
-  --edge:#8792a2; --vfill:#2a2f3a; --grid:#151923;
-}
-*{box-sizing:border-box}
-html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
-#app{display:grid;grid-template-columns:320px 1fr;grid-template-rows:auto 1fr;grid-template-areas:"top top" "side main";height:100%}
-header{grid-area:top;display:flex;gap:12px;align-items:center;padding:10px 12px;border-bottom:1px solid #222;background:var(--panel);position:sticky;top:0;z-index:10}
-header h1{font-size:16px;margin:0;font-weight:700;letter-spacing:.3px}
-header .sp{flex:1}
-header button, header .btn{background:#1e2128;border:1px solid #262a33;color:var(--ink);padding:6px 10px;border-radius:10px;cursor:pointer}
-header button:disabled{opacity:.45;cursor:not-allowed}
-header input[type="number"], header input[type="text"], header input[type="color"]{background:#101218;border:1px solid #232733;color:var(--ink);padding:6px 8px;border-radius:8px}
-
-aside{grid-area:side;border-right:1px solid #222;background:var(--panel);padding:12px;overflow:auto}
-aside h2{font-size:13px;margin:12px 0 6px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
-aside .group{display:grid;gap:8px;margin-bottom:10px}
-aside .row{display:flex;gap:8px;flex-wrap:wrap}
-aside .row>button{flex:1}
-aside button{background:#1b1f27;border:1px solid #2a2f38;color:var(--ink);padding:8px 10px;border-radius:12px;cursor:pointer}
-aside button:disabled{opacity:.45;cursor:not-allowed}
-aside .kbd{font:12px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background:#0f1116;border:1px solid #1a1e27;padding:2px 6px;border-radius:6px;color:#c8d1e1}
-#canvasWrap{grid-area:main;position:relative;overflow:hidden;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));}
-canvas{position:absolute;inset:0;width:100%;height:100%;}
-#status{position:absolute;left:10px;bottom:10px;background:#0f1218d9;border:1px solid #202532;color:var(--ink);padding:8px 10px;border-radius:10px;backdrop-filter:blur(6px);display:flex;gap:10px;align-items:center}
-#status span{opacity:.9}
-#toast{position:absolute;right:12px;bottom:12px;max-width:420px;background:#0f1218;border:1px solid #2a3040;padding:10px 12px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.35);display:none}
-details{background:#10131a;border:1px solid #1e2330;border-radius:12px;padding:8px 10px}
-summary{cursor:pointer;color:#cbd3e3}
-code,pre{background:#0f1116;border:1px solid #1a1e27;padding:6px 8px;border-radius:8px;color:#d6def0}
-.pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#161a22;border:1px solid #242a36;color:#cbd3e3}
-a{color:var(--accent)}
-.small{font-size:12px;color:var(--muted)}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PLANAR - Planar Triangulated Graph Tool</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --accent: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #34495e;
+            --success: #2ecc71;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: var(--dark);
+            line-height: 1.6;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%);
+            color: white;
+            padding: 1rem;
+            box-shadow: var(--shadow);
+            z-index: 10;
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo-icon {
+            margin-right: 10px;
+            font-size: 2rem;
+        }
+        
+        .version {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-left: 10px;
+        }
+        
+        main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .sidebar {
+            width: 300px;
+            background-color: white;
+            padding: 1.5rem;
+            overflow-y: auto;
+            box-shadow: var(--shadow);
+            z-index: 5;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        .panel {
+            background-color: white;
+            border-radius: 8px;
+            padding: 1.2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .panel-title {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--light);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+        }
+        
+        .panel-title i {
+            margin-right: 10px;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 0.6rem 1.2rem;
+            background-color: var(--secondary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+        
+        .btn:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+        }
+        
+        .btn-block {
+            display: block;
+            width: 100%;
+        }
+        
+        .btn-success {
+            background-color: var(--success);
+        }
+        
+        .btn-success:hover {
+            background-color: #27ae60;
+        }
+        
+        .btn-warning {
+            background-color: var(--warning);
+        }
+        
+        .btn-warning:hover {
+            background-color: #e67e22;
+        }
+        
+        .btn-danger {
+            background-color: var(--danger);
+        }
+        
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+        
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .control-group {
+            margin-bottom: 1.2rem;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        
+        input[type="number"], input[type="text"], select {
+            width: 100%;
+            padding: 0.6rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .checkbox-group input {
+            margin-right: 10px;
+        }
+        
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background-color: white;
+        }
+        
+        #graphCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+        
+        #graphCanvas:active {
+            cursor: grabbing;
+        }
+        
+        .status-bar {
+            background-color: var(--dark);
+            color: white;
+            padding: 0.5rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+        }
+        
+        .color-palette {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .color-box {
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        
+        .color-box.active {
+            border-color: var(--dark);
+            transform: scale(1.1);
+        }
+        
+        .instructions {
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: #666;
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border-left: 4px solid var(--secondary);
+        }
+        
+        .tab-container {
+            margin-top: 1rem;
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 1rem;
+        }
+        
+        .tab {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab.active {
+            border-bottom-color: var(--secondary);
+            color: var(--secondary);
+            font-weight: 500;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            pointer-events: none;
+            z-index: 100;
+        }
+        
+        @media (max-width: 768px) {
+            main {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: 40%;
+                overflow-y: auto;
+            }
+        }
+    </style>
 </head>
 <body>
-<div id="app">
-  <header>
-    <h1>PLANAR — Triangulated Graph Builder</h1>
-    <div class="sp"></div>
-    <label title="Go to vertex m"><span class="pill">Gm</span> <input id="gmInput" type="number" min="3" value="3" style="width:90px"></label>
-    <button id="btnRunTests" title="Run correctness tests">Run Tests</button>
-    <button id="btnExportJson" title="Export graph JSON">Export</button>
-    <input id="fileImport" type="file" accept="application/json" style="display:none">
-    <button id="btnImportJson" title="Import graph JSON">Import</button>
-    <button id="btnSavePng" title="Save PNG snapshot">Save PNG</button>
-  </header>
-
-  <aside>
-    <h2>Graph</h2>
-    <div class="group">
-      <div class="row">
-        <button id="btnStart" title="S">Start (S)</button>
-        <button id="btnRandom" title="R">Random (R)</button>
-        <button id="btnAdd" title="A">Add (A)</button>
-      </div>
-      <div class="row">
-        <button id="btnUndo" title="Undo (Ctrl+Z)">Undo</button>
-        <button id="btnRedo" title="Redo (Ctrl+Y)">Redo</button>
-        <button id="btnRedraw" title="Re-layout periphery evenly">Redraw</button>
-      </div>
-    </div>
-
-    <h2>View</h2>
-    <div class="group">
-      <div class="row">
-        <button id="btnZoomIn" title="Z+">Zoom +</button>
-        <button id="btnZoomOut" title="Z-">Zoom −</button>
-        <button id="btnCenter" title="C">Center (C)</button>
-        <button id="btnToggle" title="T">Toggle Labels/Colors (T)</button>
-      </div>
-      <small class="small">Pan: drag • Zoom: wheel</small>
-    </div>
-
-    <h2>Palette (1–4)</h2>
-    <div class="group">
-      <div class="row">
-        <label>1 <input type="color" id="col1" value="#ff6b6b"></label>
-        <label>2 <input type="color" id="col2" value="#6bcf63"></label>
-        <label>3 <input type="color" id="col3" value="#6aa6ff"></label>
-        <label>4 <input type="color" id="col4" value="#f4c95d"></label>
-      </div>
-      <div class="row">
-        <button id="btnRecolor">Recolor (DSATUR)</button>
-      </div>
-    </div>
-
-    <h2>Help</h2>
-    <div class="group">
-      <details open>
-        <summary>Commands & Hotkeys</summary>
-        <div style="padding-top:6px">
-          <div><span class="kbd">S</span> Start triangle V1–V2–V3</div>
-          <div><span class="kbd">R</span> Add random vertex (chooses Vp,Vq)</div>
-          <div><span class="kbd">A</span> Add vertex: click Vp then Vq on periphery</div>
-          <div><span class="kbd">Gm</span> Hide vertices &gt; m (header input)</div>
-          <div><span class="kbd">Z+/Z-</span> Zoom in/out (or mouse wheel)</div>
-          <div><span class="kbd">C</span> Center & fit to view</div>
-          <div><span class="kbd">T</span> Toggle labels vs colors</div>
-          <div><span class="kbd">Ctrl+Z / Ctrl+Y</span> Undo / Redo</div>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <div class="logo">
+                    <span class="logo-icon">⊡</span>
+                    PLANAR <span class="version">v1.0</span>
+                </div>
+                <div>Planar Triangulated Graph Constructor & Coloring Tool</div>
+            </div>
+        </header>
+        
+        <main>
+            <div class="sidebar">
+                <div class="panel">
+                    <h2 class="panel-title"><i class="icon">+</i> Graph Construction</h2>
+                    <div class="btn-group">
+                        <button id="addVertexBtn" class="btn btn-block">Add Vertex</button>
+                        <button id="addEdgeBtn" class="btn btn-block">Add Edge</button>
+                    </div>
+                    <div class="btn-group">
+                        <button id="triangulateBtn" class="btn btn-block btn-success">Triangulate</button>
+                        <button id="clearBtn" class="btn btn-block btn-danger">Clear Graph</button>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="vertexCount">Random Vertices:</label>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="number" id="vertexCount" min="3" max="100" value="10">
+                            <button id="randomGraphBtn" class="btn">Generate</button>
+                        </div>
+                    </div>
+                    
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="snapToGrid" checked>
+                        <label for="snapToGrid">Snap to grid</label>
+                    </div>
+                </div>
+                
+                <div class="panel">
+                    <h2 class="panel-title"><i class="icon">🎨</i> Coloring</h2>
+                    <div class="btn-group">
+                        <button id="colorizeBtn" class="btn btn-block btn-success">Color Graph</button>
+                        <button id="clearColorsBtn" class="btn btn-block">Clear Colors</button>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>Color Palette:</label>
+                        <div class="color-palette">
+                            <div class="color-box active" style="background-color: #FF6B6B;" data-color="#FF6B6B"></div>
+                            <div class="color-box" style="background-color: #4ECDC4;" data-color="#4ECDC4"></div>
+                            <div class="color-box" style="background-color: #FFE66D;" data-color="#FFE66D"></div>
+                            <div class="color-box" style="background-color: #9b59b6;" data-color="#9b59b6"></div>
+                            <div class="color-box" style="background-color: #3498db;" data-color="#3498db"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="coloringAlgorithm">Algorithm:</label>
+                        <select id="coloringAlgorithm">
+                            <option value="greedy">Greedy Coloring</option>
+                            <option value="dsatur">DSATUR</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="panel">
+                    <h2 class="panel-title"><i class="icon">⚙️</i> Visualization</h2>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="showLabels" checked>
+                        <label for="showLabels">Show vertex labels</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="showGrid" checked>
+                        <label for="showGrid">Show grid</label>
+                    </div>
+                    
+                    <div class="btn-group">
+                        <button id="zoomInBtn" class="btn btn-block">Zoom In</button>
+                        <button id="zoomOutBtn" class="btn btn-block">Zoom Out</button>
+                    </div>
+                    <button id="resetViewBtn" class="btn btn-block btn-warning">Reset View</button>
+                </div>
+            </div>
+            
+            <div class="canvas-container">
+                <canvas id="graphCanvas"></canvas>
+                <div class="tooltip" id="tooltip" style="display: none;"></div>
+            </div>
+        </main>
+        
+        <div class="status-bar">
+            <div>Vertices: <span id="vertexCountDisplay">0</span> | Edges: <span id="edgeCountDisplay">0</span> | Triangles: <span id="triangleCountDisplay">0</span></div>
+            <div>Status: <span id="statusMessage">Ready</span></div>
         </div>
-      </details>
-      <details>
-        <summary>Construction Rule</summary>
-        <p style="padding-top:6px">Each new vertex is added to the <em>periphery</em> (outer cycle) touching <strong>m &gt; 1 contiguous</strong> periphery vertices from <code>Vp</code> to <code>Vq</code> (clockwise). It connects to the two extremes and to all vertices in between, preserving triangulation by construction.</p>
-      </details>
-      <details>
-        <summary>Notes</summary>
-        <ul>
-          <li>Edges curve subtly for long spans.</li>
-          <li><em>Redraw</em> spreads periphery vertices evenly.</li>
-          <li>LOD hides labels and simplifies drawing when zoomed out.</li>
-        </ul>
-      </details>
     </div>
-  </aside>
 
-  <div id="canvasWrap">
-    <canvas id="graphCanvas"></canvas>
-    <div id="status"><span id="statMsg">Ready.</span><span id="statCounts"></span></div>
-    <div id="toast"></div>
-  </div>
-</div>
-
-<script>
-/* ============================
-   Utilities
-   ============================ */
-const TAU=Math.PI*2;
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-const lerp=(a,b,t)=>a+(b-a)*t;
-function showToast(msg, kind="info", ms=2000){
-  const el=document.getElementById('toast');
-  el.textContent=msg; el.style.display='block';
-  el.style.borderColor = kind==='error'? 'var(--bad)': kind==='warn'?'var(--warn)':'#2a3040';
-  clearTimeout(showToast._t); showToast._t=setTimeout(()=>{el.style.display='none'}, ms);
-}
-function setStatus(msg){ document.getElementById('statMsg').textContent = msg; }
-function setCounts(){ const n=graph.visibleVertexCount(); const e=graph.visibleEdgeCount(); const p=graph.periphery.length; document.getElementById('statCounts').textContent = ` | V: ${n} E: ${e} P: ${p} Zoom: ${view.scale.toFixed(2)}`; }
-
-/* ============================
-   State & simple helpers
-   ============================ */
-const state = { lastId:0, visibleMaxId:0 };
-function uid(){ state.lastId++; return state.lastId; }
-
-/* ============================
-   Spatial Hash (grid) for fast picking & culling
-   ============================ */
-class SpatialHash {
-  constructor(cell=100){
-    this.cell = cell;
-    this.buckets = new Map();
-  }
-  setCellSize(cell){
-    if(cell<=0) return;
-    this.cell = cell;
-    this.clear();
-  }
-  _key(ix,iy){ return ix + ':' + iy; }
-  clear(){ this.buckets.clear(); }
-  insert(id,x,y){
-    const ix = Math.floor(x/this.cell), iy = Math.floor(y/this.cell);
-    const key = this._key(ix,iy);
-    if(!this.buckets.has(key)) this.buckets.set(key, new Set());
-    this.buckets.get(key).add(id);
-  }
-  remove(id,x,y){
-    const ix = Math.floor(x/this.cell), iy = Math.floor(y/this.cell);
-    const key = this._key(ix,iy);
-    const s = this.buckets.get(key);
-    if(s) { s.delete(id); if(s.size===0) this.buckets.delete(key); }
-  }
-  queryRegion(xmin,ymin,xmax,ymax){
-    const ix0 = Math.floor(xmin/this.cell), iy0 = Math.floor(ymin/this.cell);
-    const ix1 = Math.floor(xmax/this.cell), iy1 = Math.floor(ymax/this.cell);
-    const out = new Set();
-    for(let ix=ix0; ix<=ix1; ix++){
-      for(let iy=iy0; iy<=iy1; iy++){
-        const s = this.buckets.get(this._key(ix,iy));
-        if(s) for(const id of s) out.add(id);
-      }
-    }
-    return out;
-  }
-}
-
-/* ============================
-   Graph model
-   ============================ */
-const graph = {
-  vertices: new Map(),   // id -> {id,x,y,color,hidden:false}
-  adj: new Map(),        // id -> Set(neighbors)
-  edges: new Set(),      // "a-b" with a<b
-  periphery: [],         // ordered clock-wise outer cycle vertex ids
-
-  reset(){
-    this.vertices.clear();
-    this.adj.clear();
-    this.edges.clear();
-    this.periphery = [];
-    state.lastId = 0;
-    state.visibleMaxId = 0;
-    spatial.clear();
-  },
-
-  _edgeKey(a,b){ if(a>b){ [a,b]=[b,a]; } return `${a}-${b}`; },
-
-  addVertex(x,y,color=1){
-    const id = uid();
-    this.vertices.set(id, { id, x, y, color, hidden:false });
-    this.adj.set(id, new Set());
-    spatial.insert(id, x, y);
-    return id;
-  },
-
-  removeVertex(id){
-    if(!this.vertices.has(id)) return false;
-    const v = this.vertices.get(id);
-    for(const n of this.adj.get(id)){
-      this.adj.get(n).delete(id);
-      this.edges.delete(this._edgeKey(id,n));
-    }
-    this.adj.delete(id);
-    this.vertices.delete(id);
-    // remove from periphery if present
-    const idx = this.periphery.indexOf(id);
-    if(idx!==-1) this.periphery.splice(idx,1);
-    spatial.remove(id, v.x, v.y);
-    return true;
-  },
-
-  addEdge(a,b){
-    if(a===b) return false;
-    if(!this.vertices.has(a) || !this.vertices.has(b)) return false;
-    const key = this._edgeKey(a,b);
-    if(this.edges.has(key)) return false;
-    this.edges.add(key);
-    this.adj.get(a).add(b);
-    this.adj.get(b).add(a);
-    return true;
-  },
-
-  hasEdge(a,b){ return this.edges.has(this._edgeKey(a,b)); },
-
-  startTriangle(){
-    this.reset();
-    const cx=0, cy=0, r=200;
-    const v1 = this.addVertex(cx + r*Math.cos(-Math.PI/2), cy + r*Math.sin(-Math.PI/2), 1);
-    const v2 = this.addVertex(cx + r*Math.cos(-Math.PI/2 + 2*Math.PI/3), cy + r*Math.sin(-Math.PI/2 + 2*Math.PI/3), 2);
-    const v3 = this.addVertex(cx + r*Math.cos(-Math.PI/2 + 4*Math.PI/3), cy + r*Math.sin(-Math.PI/2 + 4*Math.PI/3), 3);
-    this.addEdge(v1,v2); this.addEdge(v2,v3); this.addEdge(v3,v1);
-    this.periphery = [v1,v2,v3];
-    state.visibleMaxId = Math.max(v1,v2,v3);
-  },
-
-  validateRun(Vp,Vq){
-    const P = this.periphery;
-    const i = P.indexOf(Vp), j = P.indexOf(Vq);
-    if(i===-1 || j===-1) return { ok:false, reason:'Vp/Vq not on periphery' };
-    if(Vp===Vq) return { ok:false, reason:'Vp and Vq must differ' };
-    // build run clockwise from i to j inclusive
-    const run=[];
-    let k=i;
-    while(true){
-      run.push(P[k]);
-      if(k===j) break;
-      k = (k+1) % P.length;
-      if(run.length> P.length + 1) break; // safety
-    }
-    if(run.length <= 1) return { ok:false, reason:'Run length must be > 1' };
-    return { ok:true, run, i, j };
-  },
-
-  _peripheryCentroid(){
-    if(this.periphery.length===0) return {x:0,y:0};
-    let cx=0, cy=0;
-    for(const id of this.periphery){
-      const v = this.vertices.get(id);
-      cx += v.x; cy += v.y;
-    }
-    return { x: cx / this.periphery.length, y: cy / this.periphery.length };
-  },
-
-  _placeNewVertex(run){
-    // centroid of run
-    let cx=0, cy=0;
-    for(const id of run){ const v = this.vertices.get(id); cx += v.x; cy += v.y; }
-    cx /= run.length; cy /= run.length;
-    // outward direction -> from overall periphery centroid to run centroid
-    const g = this._peripheryCentroid();
-    let dx = cx - g.x, dy = cy - g.y;
-    let len = Math.hypot(dx,dy);
-    if(len < 1e-6){ dx = Math.random()-0.5; dy = Math.random()-0.5; len = Math.hypot(dx,dy); }
-    dx/=len; dy/=len;
-    const push = 30 + Math.random()*20;
-    return { x: cx + dx*push, y: cy + dy*push };
-  },
-
-  addOnPeriphery(Vp,Vq){
-    const vres = this.validateRun(Vp,Vq);
-    if(!vres.ok) throw new Error(vres.reason);
-    const { run, i, j } = vres;
-    // compute new vertex position
-    const pos = this._placeNewVertex(run);
-    const newId = this.addVertex(pos.x, pos.y, ((state.lastId-1) % 4) + 1);
-    // connect to every vertex in run
-    for(const u of run) this.addEdge(newId, u);
-    // update periphery: remove run (i..j inclusive) and insert newId at position i
-    // Carefully handle wrap
-    const P = this.periphery.slice(); // copy
-    const newP = [];
-    if(i <= j){
-      // keep [0..i-1], then newId, then [j+1..end]
-      for(let k=0;k<i;k++) newP.push(P[k]);
-      newP.push(newId);
-      for(let k=j+1;k<P.length;k++) newP.push(P[k]);
-    } else {
-      // wrap: run is i..end and 0..j
-      // keep [j+1..i-1], but starting from 0 we will reassemble maintaining clockwise order starting at index 0
-      // choose to keep vertices from j+1 to i-1 (in circular order)
-      let k = (j+1) % P.length;
-      while(k !== i){
-        newP.push(P[k]); k = (k+1) % P.length;
-      }
-      // insert newId at the end (which corresponds to position i)
-      newP.push(newId);
-    }
-    // ensure periphery has at least 3 if possible; else we still assign
-    this.periphery = newP.length>0 ? newP : [newId];
-    return newId;
-  },
-
-  addRandom(){
-    const P = this.periphery;
-    if(P.length < 2) throw new Error('Periphery too small');
-    // choose random i,j with run length >1
-    for(let attempts=0; attempts<50; attempts++){
-      let i = Math.floor(Math.random()*P.length);
-      let j = Math.floor(Math.random()*P.length);
-      if(i===j) j=(j+1)%P.length;
-      const vres = this.validateRun(P[i], P[j]);
-      if(vres.ok && vres.run.length>1) return this.addOnPeriphery(P[i], P[j]);
-    }
-    // fallback: try sequential pairs
-    for(let i=0;i<P.length;i++){
-      const j=(i+2)%P.length;
-      const vres = this.validateRun(P[i], P[j]);
-      if(vres.ok && vres.run.length>1) return this.addOnPeriphery(P[i], P[j]);
-    }
-    throw new Error('Could not find a valid random run');
-  },
-
-  setVisibleMaxId(m){
-    state.visibleMaxId = m;
-    for(const [id,v] of this.vertices) v.hidden = id > m;
-  },
-
-  visibleVertexCount(){ let c=0; for(const v of this.vertices.values()) if(!v.hidden) c++; return c; },
-  visibleEdgeCount(){ let c=0; for(const k of this.edges){ const [a,b]=k.split('-').map(Number); if(this.vertices.get(a) && this.vertices.get(b) && !this.vertices.get(a).hidden && !this.vertices.get(b).hidden) c++; } return c; },
-
-  recolorDSATUR(){
-    // Only consider visible vertices
-    const visibles = [...this.vertices.values()].filter(v=>!v.hidden);
-    if(visibles.length===0) return;
-    for(const v of visibles) v.color = 0;
-    const sat = new Map(); // id -> Set(colors)
-    for(const v of visibles) sat.set(v.id, new Set());
-    const deg = (id) => {
-      let c=0;
-      for(const n of this.adj.get(id)) if(this.vertices.get(n) && !this.vertices.get(n).hidden) c++;
-      return c;
-    };
-    // initial ordering by degree
-    const ids = visibles.map(v=>v.id).sort((a,b)=>deg(b)-deg(a));
-    // pick first (max degree)
-    const first = ids[0]; this.vertices.get(first).color = 1;
-    for(const n of this.adj.get(first)) if(this.vertices.get(n) && !this.vertices.get(n).hidden) sat.get(n).add(1);
-    const colored = new Set([first]);
-    while(colored.size < ids.length){
-      // choose with highest saturation (distinct neighbor colors), tie by degree
-      let pick = null, bestSat=-1, bestDeg=-1;
-      for(const id of ids) {
-        if(colored.has(id)) continue;
-        const s = sat.get(id).size;
-        const d = deg(id);
-        if(s>bestSat || (s===bestSat && d>bestDeg)){ pick=id; bestSat=s; bestDeg=d; }
-      }
-      if(pick===null) break;
-      // smallest available color 1..4
-      const used = sat.get(pick);
-      let color=1; while(used.has(color) && color<=4) color++;
-      if(color>4) color = ((Math.floor(Math.random()*4))+1);
-      this.vertices.get(pick).color = color;
-      colored.add(pick);
-      for(const n of this.adj.get(pick)) if(this.vertices.get(n) && !this.vertices.get(n).hidden) sat.get(n).add(color);
-    }
-  },
-
-  // triangulation invariant: E = 3N - 3 - p  (for triangulated planar graphs with p outer face vertices)
-  checkTriangulationInvariant(){
-    const N = [...this.vertices.values()].filter(v=>!v.hidden).length;
-    const E = [...this.edges].filter(k=>{ const [a,b] = k.split('-').map(Number); return !this.vertices.get(a).hidden && !this.vertices.get(b).hidden; }).length;
-    const p = this.periphery.length;
-    return { ok: E === 3*N - 3 - p, N, E, p, expected: 3*N - 3 - p };
-  },
-
-  serialize(){
-    return JSON.stringify({
-      vertices: [...this.vertices.values()],
-      edges: [...this.edges],
-      periphery: [...this.periphery],
-      lastId: state.lastId,
-      visibleMaxId: state.visibleMaxId
-    });
-  },
-
-  deserialize(json){
-    const o = JSON.parse(json);
-    this.vertices = new Map(o.vertices.map(v=>[v.id, v]));
-    this.adj = new Map();
-    for(const [id,v] of this.vertices) this.adj.set(id, new Set());
-    this.edges = new Set(o.edges);
-    for(const k of this.edges){
-      const [a,b]=k.split('-').map(Number);
-      if(!this.adj.has(a)) this.adj.set(a,new Set());
-      if(!this.adj.has(b)) this.adj.set(b,new Set());
-      this.adj.get(a).add(b); this.adj.get(b).add(a);
-    }
-    this.periphery = o.periphery || [];
-    state.lastId = o.lastId || Math.max(...(this.periphery.length?this.periphery:[0]));
-    state.visibleMaxId = o.visibleMaxId || state.lastId;
-    // rebuild spatial
-    spatial.clear();
-    for(const [id,v] of this.vertices) spatial.insert(id, v.x, v.y);
-  }
-};
-
-/* ============================
-   Undo / Redo (history)
-   ============================ */
-const history = {
-  stack: [], redo: [],
-  push(){
-    try{
-      this.stack.push(graph.serialize());
-      if(this.stack.length > 200) this.stack.shift(); // keep history bounded
-      this.redo.length = 0;
-    }catch(e){ console.warn('History push failed', e); }
-  },
-  canUndo(){ return this.stack.length > 0; },
-  canRedo(){ return this.redo.length > 0; },
-  undo(){
-    if(!this.canUndo()) return;
-    const cur = graph.serialize();
-    const prev = this.stack.pop();
-    this.redo.push(cur);
-    graph.deserialize(prev);
-    requestDraw();
-    updateUI();
-    setStatus('Undo');
-  },
-  redo(){
-    if(!this.canRedo()) return;
-    const cur = graph.serialize();
-    const next = this.redo.pop();
-    this.stack.push(cur);
-    graph.deserialize(next);
-    requestDraw();
-    updateUI();
-    setStatus('Redo');
-  }
-};
-
-/* ============================
-   Rendering & Viewport
-   ============================ */
-const canvas = document.getElementById('graphCanvas');
-const ctx = canvas.getContext('2d', { alpha:false });
-const offEdges = document.createElement('canvas');
-const offVerts = document.createElement('canvas');
-const edgesCtx = offEdges.getContext('2d');
-const vertsCtx = offVerts.getContext('2d');
-
-let needsRedraw=true;
-function requestDraw(){ needsRedraw=true; }
-
-const view = { x:0, y:0, scale:1, dragging:false, last:{x:0,y:0} };
-
-function resize(){
-  const wrap = document.getElementById('canvasWrap');
-  const w = wrap.clientWidth, h = wrap.clientHeight;
-  canvas.width = w; canvas.height = h;
-  offEdges.width = w; offEdges.height = h;
-  offVerts.width = w; offVerts.height = h;
-  requestDraw();
-}
-window.addEventListener('resize', resize);
-
-function worldToScreen(x,y){
-  return { x: x*view.scale + canvas.width/2 + view.x, y: y*view.scale + canvas.height/2 + view.y };
-}
-function screenToWorld(x,y){
-  return { x: (x - canvas.width/2 - view.x)/view.scale, y: (y - canvas.height/2 - view.y)/view.scale };
-}
-
-function centerFit(){
-  const vs = [...graph.vertices.values()].filter(v=>!v.hidden);
-  if(vs.length===0){ view.x=0; view.y=0; view.scale=1; requestDraw(); return; }
-  let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;
-  for(const v of vs){ minx=Math.min(minx,v.x); maxx=Math.max(maxx,v.x); miny=Math.min(miny,v.y); maxy=Math.max(maxy,v.y); }
-  const pad = 80;
-  const w = Math.max(1, maxx - minx + pad*2), h = Math.max(1, maxy - miny + pad*2);
-  const sx = canvas.width / w, sy = canvas.height / h;
-  view.scale = clamp(Math.min(sx,sy), 0.05, 8);
-  const cx = (minx + maxx)/2, cy = (miny + maxy)/2;
-  const cs = worldToScreen(cx,cy);
-  view.x += (canvas.width/2 - cs.x);
-  view.y += (canvas.height/2 - cs.y);
-  // update spatial cell size relative to scale
-  spatial.setCellSize(Math.max(60, 120 / view.scale));
-  requestDraw();
-}
-
-/* Helpers for CSS var */
-function varCSS(name){ return getComputedStyle(document.documentElement).getPropertyValue(name) || '#8892a0'; }
-
-/* Layer invalidation flags */
-const layers = { edgesDirty:true, vertsDirty:true };
-
-/* Palette */
-const palette = {1:'#ff6b6b',2:'#6bcf63',3:'#6aa6ff',4:'#f4c95d'} ;
-
-/* LOD thresholds */
-function getLODTier(){
-  // 0: points only (very far out)
-  // 1: edges visible, no labels
-  // 2: full detail (edge curves, labels)
-  if(view.scale < 0.25) return 0;
-  if(view.scale < 0.6) return 1;
-  return 2;
-}
-
-/* Draw functions with culling and caching */
-function draw(){
-  if(!needsRedraw) return;
-  needsRedraw=false;
-  setCounts();
-
-  // clear main canvas
-  ctx.setTransform(1,0,0,1,0,0);
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle = varCSS('--bg');
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-
-  // grid light
-  drawGrid();
-
-  // prepare transforms for offscreen compositing
-  [edgesCtx, vertsCtx].forEach(c=>{
-    c.setTransform(view.scale, 0, 0, view.scale, canvas.width/2 + view.x, canvas.height/2 + view.y);
-  });
-
-  const lod = getLODTier();
-
-  // compute viewport in world coords for culling
-  const minW = screenToWorld(0,0).x;
-  const minH = screenToWorld(0,0).y;
-  const maxW = screenToWorld(canvas.width, canvas.height).x;
-  const maxH = screenToWorld(canvas.width, canvas.height).y;
-
-  // decide which vertices are in viewport using spatial hash
-  const visibleIds = spatial.queryRegion(minW-100, minH-100, maxW+100, maxH+100);
-
-  // Edges layer: redraw only when dirty or scale tier changed or when viewport changed significantly
-  if(layers.edgesDirty || true){ // we redraw edges each frame but we cull heavy work
-    edgesCtx.clearRect(-canvas.width, -canvas.height, canvas.width*3, canvas.height*3);
-    edgesCtx.lineWidth = Math.max(0.8 / view.scale, 0.4);
-    edgesCtx.strokeStyle = varCSS('--edge');
-    edgesCtx.beginPath();
-    for(const k of graph.edges){
-      const [a,b] = k.split('-').map(Number);
-      const va = graph.vertices.get(a), vb = graph.vertices.get(b);
-      if(!va || !vb || va.hidden || vb.hidden) continue;
-      // cull if both vertices outside viewport plus margin
-      if(!visibleIds.has(a) && !visibleIds.has(b)) continue;
-      drawEdge(edgesCtx, va, vb);
-    }
-    edgesCtx.stroke();
-    layers.edgesDirty = false;
-  }
-
-  // Verts layer
-  vertsCtx.clearRect(-canvas.width, -canvas.height, canvas.width*3, canvas.height*3);
-  for(const id of visibleIds){
-    const v = graph.vertices.get(id);
-    if(!v || v.hidden) continue;
-    drawVertex(vertsCtx, v, lod === 2);
-  }
-
-  // Composite layers onto main canvas
-  ctx.drawImage(offEdges, 0, 0);
-  ctx.drawImage(offVerts, 0, 0);
-}
-
-/* draw grid */
-function drawGrid(){
-  const step = 50 * view.scale;
-  if(step < 9) return;
-  ctx.save();
-  ctx.globalAlpha = 0.35;
-  ctx.fillStyle = varCSS('--grid');
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.beginPath();
-  ctx.strokeStyle = '#161a22';
-  ctx.lineWidth = 1;
-  const ox = (canvas.width/2 + view.x) % step;
-  const oy = (canvas.height/2 + view.y) % step;
-  for(let x = ox; x < canvas.width; x += step){ ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); }
-  for(let y = oy; y < canvas.height; y += step){ ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); }
-  ctx.stroke();
-  ctx.restore();
-}
-
-/* draw edge: curved for long spans */
-function drawEdge(c, a, b){
-  const dx = b.x - a.x, dy = b.y - a.y;
-  const d = Math.hypot(dx,dy);
-  if(d > 240){
-    const mx = (a.x + b.x)/2, my = (a.y + b.y)/2;
-    const nx = -dy/d, ny = dx/d;
-    const bulge = Math.min(0.14*d, 80);
-    c.moveTo(a.x, a.y);
-    c.quadraticCurveTo(mx + nx*bulge, my + ny*bulge, b.x, b.y);
-  } else {
-    c.moveTo(a.x, a.y); c.lineTo(b.x, b.y);
-  }
-}
-
-/* draw vertex */
-function drawVertex(c, v, showLabel){
-  const fill = palette[v.color] || '#999';
-  // adaptive radius (in world units)
-  const r = clamp(6 + String(v.id).length*1.2, 6, 14) / Math.sqrt(view.scale);
-  c.beginPath(); c.fillStyle = fill; c.strokeStyle = '#0b0d12'; c.lineWidth = Math.max(1 / view.scale, 0.6);
-  c.arc(v.x, v.y, r, 0, TAU); c.fill(); c.stroke();
-  if(showLabel){
-    // draw number in screen-space for crispness
-    c.save();
-    c.scale(1/view.scale, 1/view.scale);
-    c.fillStyle = '#0b0d12';
-    const fontPx = Math.max(9, 12);
-    c.font = `${fontPx}px ui-sans-serif`;
-    const s = String(v.id);
-    const measure = c.measureText(s);
-    // measure.width is in CSS px but coords are scaled, so we offset accordingly
-    c.fillText(s, (v.x*view.scale) - measure.width/2, (v.y*view.scale) + fontPx/3);
-    c.restore();
-  }
-}
-
-/* ============================
-   Layout: distribute periphery evenly
-   ============================ */
-function layoutPeriphery(){
-  const P = graph.periphery;
-  if(P.length < 3) return;
-  // centroid of periphery
-  let cx=0, cy=0;
-  for(const id of P){ const v = graph.vertices.get(id); cx+=v.x; cy+=v.y; }
-  cx/=P.length; cy/=P.length;
-  // choose radius based on current bounding
-  let maxR = 0;
-  for(const id of P){ const v = graph.vertices.get(id); maxR = Math.max(maxR, Math.hypot(v.x-cx, v.y-cy)); }
-  const r = Math.max(140, maxR);
-  for(let k=0;k<P.length;k++){
-    const t = -Math.PI/2 + TAU*(k/P.length);
-    const v = graph.vertices.get(P[k]); v.x = cx + r*Math.cos(t); v.y = cy + r*Math.sin(t);
-    spatial.remove(v.id, 0,0); // clear possible stale
-    spatial.insert(v.id, v.x, v.y);
-  }
-  layers.vertsDirty = true; layers.edgesDirty = true;
-}
-
-/* ============================
-   Interaction helpers (hit-testing)
-   ============================ */
-function pickVertexAt(mx,my){
-  const w = screenToWorld(mx,my);
-  // query spatial around point
-  const candidates = spatial.queryRegion(w.x-30, w.y-30, w.x+30, w.y+30);
-  let best = null, bestD = 15 / view.scale;
-  for(const id of candidates){
-    const v = graph.vertices.get(id);
-    if(!v || v.hidden) continue;
-    const d = Math.hypot(v.x - w.x, v.y - w.y);
-    if(d < bestD){ best = v; bestD = d; }
-  }
-  return best;
-}
-
-/* ============================
-   Interaction & Events
-   ============================ */
-let mode = { addPicking:false, pickVp:null };
-
-canvas.addEventListener('mousedown', e=>{
-  if(e.button === 0){ // left
-    if(mode.addPicking){
-      const v = pickVertexAt(e.offsetX, e.offsetY);
-      if(!v){ showToast('No vertex at that point', 'warn'); return; }
-      if(!graph.periphery.includes(v.id)){ showToast('Vertex not on periphery', 'error'); return; }
-      if(!mode.pickVp){ mode.pickVp = v.id; setStatus(`Picked Vp = V${v.id}. Now pick Vq.`); return; }
-      if(mode.pickVp === v.id){ showToast('Vp and Vq must differ', 'error'); return; }
-      try{
-        history.push();
-        const newId = graph.addOnPeriphery(mode.pickVp, v.id);
-        layoutPeriphery();
-        layers.edgesDirty = layers.vertsDirty = true;
-        requestDraw(); setStatus(`Added V${newId}`); updateUI();
-      } catch(err){
-        showToast(err.message, 'error');
-      } finally {
-        mode.addPicking = false; mode.pickVp = null;
-      }
-    } else {
-      view.dragging = true; view.last.x = e.clientX; view.last.y = e.clientY;
-    }
-  } else if(e.button === 2){
-    // right click: could be used in future for context menu
-  }
-});
-window.addEventListener('mousemove', e=>{
-  if(view.dragging){
-    view.x += (e.clientX - view.last.x);
-    view.y += (e.clientY - view.last.y);
-    view.last.x = e.clientX; view.last.y = e.clientY;
-    layers.edgesDirty = layers.vertsDirty = true;
-    requestDraw();
-  }
-});
-window.addEventListener('mouseup', ()=>{ view.dragging = false; });
-
-canvas.addEventListener('wheel', e=>{
-  e.preventDefault();
-  const factor = (e.deltaY < 0) ? 1.12 : 0.88;
-  zoomAt(e.offsetX, e.offsetY, factor);
-}, { passive:false });
-
-function zoomAt(mx,my,factor){
-  const pre = screenToWorld(mx,my);
-  view.scale = clamp(view.scale * factor, 0.05, 12);
-  // update spatial granularity as scale changes
-  spatial.setCellSize(Math.max(40, 120 / view.scale));
-  const post = screenToWorld(mx,my);
-  view.x += (post.x - pre.x) * view.scale;
-  view.y += (post.y - pre.y) * view.scale;
-  layers.edgesDirty = layers.vertsDirty = true;
-  requestDraw();
-}
-
-/* ============================
-   Buttons & UI wiring
-   ============================ */
-function updateUI(){
-  const hasGraph = graph.periphery.length >= 3;
-  document.getElementById('btnAdd').disabled = !hasGraph;
-  document.getElementById('btnRandom').disabled = !hasGraph;
-  document.getElementById('btnUndo').disabled = !history.canUndo();
-  document.getElementById('btnRedo').disabled = !history.canRedo();
-}
-document.getElementById('btnStart').onclick = ()=>{ history.push(); graph.startTriangle(); centerFit(); layers.edgesDirty = layers.vertsDirty = true; requestDraw(); setStatus('Started'); updateUI(); };
-document.getElementById('btnRandom').onclick = ()=>{ try{ history.push(); const id = graph.addRandom(); layoutPeriphery(); layers.edgesDirty = layers.vertsDirty = true; requestDraw(); setStatus(`Added V${id}`); updateUI(); }catch(err){ showToast(err.message,'error'); } };
-document.getElementById('btnAdd').onclick = ()=>{ if(graph.periphery.length<3) { showToast('Start graph first (S)','warn'); return; } mode.addPicking=true; mode.pickVp=null; setStatus('Pick Vp then Vq on periphery...'); };
-document.getElementById('btnUndo').onclick = ()=>history.undo();
-document.getElementById('btnRedo').onclick = ()=>history.redo();
-document.getElementById('btnRedraw').onclick = ()=>{ layoutPeriphery(); layers.edgesDirty = layers.vertsDirty = true; requestDraw(); setStatus('Periphery redrawn'); };
-
-document.getElementById('btnZoomIn').onclick = ()=>zoomAt(canvas.width/2, canvas.height/2, 1.2);
-document.getElementById('btnZoomOut').onclick = ()=>zoomAt(canvas.width/2, canvas.height/2, 0.8333);
-document.getElementById('btnCenter').onclick = ()=>centerFit();
-
-let showLabels = true;
-document.getElementById('btnToggle').onclick = ()=>{ showLabels = !showLabels; layers.vertsDirty = true; requestDraw(); setStatus(showLabels? 'Labels on':'Labels off'); };
-
-document.getElementById('gmInput').addEventListener('change', e=>{
-  const m = parseInt(e.target.value||"0",10);
-  if(isNaN(m) || m<0){ showToast('Invalid number','warn'); return; }
-  graph.setVisibleMaxId(m);
-  layers.edgesDirty = layers.vertsDirty = true;
-  requestDraw(); setStatus(`Showing up to vertex ${m}`);
-});
-
-/* palette bindings */
-for(let i=1;i<=4;i++){
-  document.getElementById('col'+i).addEventListener('input', (e)=>{ palette[i]=e.target.value; layers.vertsDirty = true; requestDraw(); });
-}
-document.getElementById('btnRecolor').onclick = ()=>{ history.push(); graph.recolorDSATUR(); layers.vertsDirty=true; requestDraw(); setStatus('Recolored (DSATUR)'); };
-
-/* export / import / png */
-document.getElementById('btnExportJson').onclick = ()=>{
-  try{
-    const blob = new Blob([graph.serialize()], { type:'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'planar_graph.json'; a.click(); URL.revokeObjectURL(url);
-  }catch(e){ showToast('Export failed','error'); }
-};
-document.getElementById('btnImportJson').onclick = ()=>document.getElementById('fileImport').click();
-document.getElementById('fileImport').addEventListener('change', e=>{
-  const f = e.target.files[0]; if(!f) return;
-  const rd = new FileReader();
-  rd.onload = ()=>{ try{ history.push(); graph.deserialize(rd.result); layers.edgesDirty = layers.vertsDirty = true; requestDraw(); setStatus('Imported'); updateUI(); }catch(err){ showToast('Invalid file','error'); } };
-  rd.readAsText(f);
-});
-document.getElementById('btnSavePng').onclick = ()=>{
-  const url = canvas.toDataURL('image/png'); const a = document.createElement('a'); a.href = url; a.download = 'planar_graph.png'; a.click();
-};
-
-/* Run unit-ish tests: build moderate graph then test invariants */
-document.getElementById('btnRunTests').onclick = ()=>{
-  try{
-    const snap = graph.serialize();
-    if(graph.periphery.length < 3) graph.startTriangle();
-    // add ~300 vertices as a moderate test, keeping UI responsive
-    const addCount = 300;
-    let added = 0;
-    const t0 = performance.now();
-    while(added < addCount){
-      graph.addRandom();
-      if(added % 6 === 0) layoutPeriphery();
-      added++;
-    }
-    const inv = graph.checkTriangulationInvariant();
-    graph.deserialize(snap);
-    if(!inv.ok) showToast(`Triangulation failed: E=${inv.E} expected ${inv.expected}`, 'error', 4000);
-    else showToast(`Tests OK — N=${inv.N} E=${inv.E} P=${inv.p}`, 'info', 2200);
-  }catch(err){ showToast('Test error: '+err.message,'error',3000); }
-};
-
-/* Hotkeys */
-window.addEventListener('keydown', e=>{
-  if(e.ctrlKey && e.key.toLowerCase() === 'z'){ e.preventDefault(); history.undo(); return; }
-  if(e.ctrlKey && e.key.toLowerCase() === 'y'){ e.preventDefault(); history.redo(); return; }
-  if(['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) return;
-  const k = e.key.toLowerCase();
-  if(k === 's') document.getElementById('btnStart').click();
-  else if(k === 'r') document.getElementById('btnRandom').click();
-  else if(k === 'a') document.getElementById('btnAdd').click();
-  else if(k === 'c') document.getElementById('btnCenter').click();
-  else if(k === 't') document.getElementById('btnToggle').click();
-  else if(k === '+') document.getElementById('btnZoomIn').click();
-  else if(k === '-') document.getElementById('btnZoomOut').click();
-});
-
-/* ============================
-   Initialization
-   ============================ */
-
-const spatial = new SpatialHash(120); // will be tuned by centerFit
-// initialize viewport sizing
-resize();
-setStatus('Ready. Press S to start.');
-setCounts();
-updateUI();
-
-// Seed with a triangle for convenience
-graph.startTriangle();
-centerFit();
-layers.edgesDirty = layers.vertsDirty = true;
-requestDraw();
-
-/* Animation loop */
-function tick(){
-  draw();
-  requestAnimationFrame(tick);
-}
-tick();
-
-/* expose a few things to window for debugging (optional) */
-window._PLANAR = { graph, view, spatial, history, layoutPeriphery };
-
-</script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Canvas setup
+            const canvas = document.getElementById('graphCanvas');
+            const ctx = canvas.getContext('2d');
+            const tooltip = document.getElementById('tooltip');
+            
+            // Resize canvas to fit window
+            function resizeCanvas() {
+                canvas.width = canvas.offsetWidth;
+                canvas.height = canvas.offsetHeight;
+                drawGraph();
+            }
+            
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+            
+            // Graph data structure
+            let graph = {
+                vertices: [],
+                edges: [],
+                triangles: []
+            };
+            
+            // View state
+            let viewState = {
+                scale: 1,
+                offsetX: 0,
+                offsetY: 0,
+                lastX: 0,
+                lastY: 0,
+                dragging: false,
+                mode: 'select', // Modes: select, addVertex, addEdge
+                selectedVertex: null,
+                hoverVertex: null
+            };
+            
+            // Initialize with a sample graph
+            function initSampleGraph() {
+                graph.vertices = [
+                    { id: 1, x: 400, y: 300, color: null, label: '1' },
+                    { id: 2, x: 500, y: 200, color: null, label: '2' },
+                    { id: 3, x: 600, y: 300, color: null, label: '3' },
+                    { id: 4, x: 500, y: 400, color: null, label: '4' }
+                ];
+                
+                graph.edges = [
+                    { v1: 1, v2: 2 },
+                    { v1: 2, v2: 3 },
+                    { v1: 3, v2: 4 },
+                    { v1: 4, v2: 1 },
+                    { v1: 1, v2: 3 }
+                ];
+                
+                graph.triangles = [
+                    { v1: 1, v2: 2, v3: 3 },
+                    { v1: 1, v2: 3, v3: 4 }
+                ];
+                
+                updateCounts();
+                drawGraph();
+            }
+            
+            // Update status counts
+            function updateCounts() {
+                document.getElementById('vertexCountDisplay').textContent = graph.vertices.length;
+                document.getElementById('edgeCountDisplay').textContent = graph.edges.length;
+                document.getElementById('triangleCountDisplay').textContent = graph.triangles.length;
+            }
+            
+            // Draw the graph
+            function drawGraph() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Apply transformations for pan/zoom
+                ctx.save();
+                ctx.translate(viewState.offsetX, viewState.offsetY);
+                ctx.scale(viewState.scale, viewState.scale);
+                
+                // Draw grid if enabled
+                if (document.getElementById('showGrid').checked) {
+                    drawGrid();
+                }
+                
+                // Draw edges
+                ctx.strokeStyle = '#95a5a6';
+                ctx.lineWidth = 2;
+                
+                for (const edge of graph.edges) {
+                    const v1 = graph.vertices.find(v => v.id === edge.v1);
+                    const v2 = graph.vertices.find(v => v.id === edge.v2);
+                    
+                    if (v1 && v2) {
+                        ctx.beginPath();
+                        ctx.moveTo(v1.x, v1.y);
+                        ctx.lineTo(v2.x, v2.y);
+                        ctx.stroke();
+                    }
+                }
+                
+                // Draw triangles if any
+                if (graph.triangles.length > 0) {
+                    ctx.fillStyle = 'rgba(189, 195, 199, 0.2)';
+                    
+                    for (const triangle of graph.triangles) {
+                        const v1 = graph.vertices.find(v => v.id === triangle.v1);
+                        const v2 = graph.vertices.find(v => v.id === triangle.v2);
+                        const v3 = graph.vertices.find(v => v.id === triangle.v3);
+                        
+                        if (v1 && v2 && v3) {
+                            ctx.beginPath();
+                            ctx.moveTo(v1.x, v1.y);
+                            ctx.lineTo(v2.x, v2.y);
+                            ctx.lineTo(v3.x, v3.y);
+                            ctx.closePath();
+                            ctx.fill();
+                        }
+                    }
+                }
+                
+                // Draw vertices
+                for (const vertex of graph.vertices) {
+                    ctx.beginPath();
+                    ctx.arc(vertex.x, vertex.y, 10, 0, Math.PI * 2);
+                    
+                    // Use vertex color if available, otherwise default
+                    ctx.fillStyle = vertex.color || '#e74c3c';
+                    ctx.fill();
+                    
+                    // Draw outline
+                    ctx.strokeStyle = '#2c3e50';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    
+                    // Draw label if enabled
+                    if (document.getElementById('showLabels').checked) {
+                        ctx.fillStyle = '#2c3e50';
+                        ctx.font = '14px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(vertex.label || vertex.id, vertex.x, vertex.y);
+                    }
+                }
+                
+                // Highlight selected vertex
+                if (viewState.selectedVertex) {
+                    const vertex = graph.vertices.find(v => v.id === viewState.selectedVertex);
+                    if (vertex) {
+                        ctx.beginPath();
+                        ctx.arc(vertex.x, vertex.y, 15, 0, Math.PI * 2);
+                        ctx.strokeStyle = '#3498db';
+                        ctx.lineWidth = 3;
+                        ctx.stroke();
+                    }
+                }
+                
+                // Highlight hover vertex
+                if (viewState.hoverVertex) {
+                    const vertex = graph.vertices.find(v => v.id === viewState.hoverVertex);
+                    if (vertex) {
+                        ctx.beginPath();
+                        ctx.arc(vertex.x, vertex.y, 12, 0, Math.PI * 2);
+                        ctx.strokeStyle = '#f39c12';
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                    }
+                }
+                
+                ctx.restore();
+            }
+            
+            // Draw grid
+            function drawGrid() {
+                const gridSize = 20;
+                const width = canvas.width / viewState.scale;
+                const height = canvas.height / viewState.scale;
+                const startX = -viewState.offsetX / viewState.scale;
+                const startY = -viewState.offsetY / viewState.scale;
+                
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+                ctx.lineWidth = 1;
+                
+                // Vertical lines
+                for (let x = startX; x < startX + width; x += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, startY);
+                    ctx.lineTo(x, startY + height);
+                    ctx.stroke();
+                }
+                
+                // Horizontal lines
+                for (let y = startY; y < startY + height; y += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(startX, y);
+                    ctx.lineTo(startX + width, y);
+                    ctx.stroke();
+                }
+            }
+            
+            // Convert screen coordinates to graph coordinates
+            function screenToGraph(x, y) {
+                return {
+                    x: (x - viewState.offsetX) / viewState.scale,
+                    y: (y - viewState.offsetY) / viewState.scale
+                };
+            }
+            
+            // Find vertex at coordinates
+            function findVertexAt(x, y, tolerance = 15) {
+                for (const vertex of graph.vertices) {
+                    const dx = vertex.x - x;
+                    const dy = vertex.y - y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance <= tolerance / viewState.scale) {
+                        return vertex;
+                    }
+                }
+                return null;
+            }
+            
+            // Add a new vertex
+            function addVertex(x, y) {
+                const newId = graph.vertices.length > 0 ? Math.max(...graph.vertices.map(v => v.id)) + 1 : 1;
+                
+                // Snap to grid if enabled
+                if (document.getElementById('snapToGrid').checked) {
+                    x = Math.round(x / 20) * 20;
+                    y = Math.round(y / 20) * 20;
+                }
+                
+                graph.vertices.push({
+                    id: newId,
+                    x: x,
+                    y: y,
+                    color: null,
+                    label: newId.toString()
+                });
+                
+                updateCounts();
+                drawGraph();
+                return newId;
+            }
+            
+            // Add an edge between two vertices
+            function addEdge(v1, v2) {
+                // Check if edge already exists
+                const edgeExists = graph.edges.some(edge => 
+                    (edge.v1 === v1 && edge.v2 === v2) || (edge.v1 === v2 && edge.v2 === v1));
+                
+                if (!edgeExists && v1 !== v2) {
+                    graph.edges.push({ v1: v1, v2: v2 });
+                    updateCounts();
+                    drawGraph();
+                    return true;
+                }
+                return false;
+            }
+            
+            // Triangulate the graph
+            function triangulate() {
+                // Simple implementation for demonstration
+                // In a real application, you would use a proper triangulation algorithm
+                
+                if (graph.vertices.length < 3) {
+                    setStatusMessage("Need at least 3 vertices to triangulate");
+                    return;
+                }
+                
+                // Clear existing triangles
+                graph.triangles = [];
+                
+                // Create a simple triangulation (this is a placeholder)
+                // For a real implementation, consider using Delaunay triangulation
+                for (let i = 0; i < graph.vertices.length - 2; i++) {
+                    graph.triangles.push({
+                        v1: graph.vertices[i].id,
+                        v2: graph.vertices[i+1].id,
+                        v3: graph.vertices[i+2].id
+                    });
+                }
+                
+                // Add edges for the triangles
+                for (const triangle of graph.triangles) {
+                    addEdge(triangle.v1, triangle.v2);
+                    addEdge(triangle.v2, triangle.v3);
+                    addEdge(triangle.v3, triangle.v1);
+                }
+                
+                setStatusMessage("Graph triangulated");
+                updateCounts();
+                drawGraph();
+            }
+            
+            // Color the graph
+            function colorGraph() {
+                const algorithm = document.getElementById('coloringAlgorithm').value;
+                
+                // Simple greedy coloring algorithm
+                if (algorithm === 'greedy') {
+                    // Reset all colors
+                    for (const vertex of graph.vertices) {
+                        vertex.color = null;
+                    }
+                    
+                    // Get the selected color palette
+                    const activeColor = document.querySelector('.color-box.active').dataset.color;
+                    
+                    // Assign colors (this is a simplified implementation)
+                    for (const vertex of graph.vertices) {
+                        const adjacentColors = new Set();
+                        
+                        // Find all adjacent colors
+                        for (const edge of graph.edges) {
+                            if (edge.v1 === vertex.id) {
+                                const adjacentVertex = graph.vertices.find(v => v.id === edge.v2);
+                                if (adjacentVertex && adjacentVertex.color) {
+                                    adjacentColors.add(adjacentVertex.color);
+                                }
+                            } else if (edge.v2 === vertex.id) {
+                                const adjacentVertex = graph.vertices.find(v => v.id === edge.v1);
+                                if (adjacentVertex && adjacentVertex.color) {
+                                    adjacentColors.add(adjacentVertex.color);
+                                }
+                            }
+                        }
+                        
+                        // Assign the first available color
+                        if (!adjacentColors.has(activeColor)) {
+                            vertex.color = activeColor;
+                        } else {
+                            // Fallback to a different color
+                            vertex.color = '#FFE66D';
+                        }
+                    }
+                }
+                
+                setStatusMessage("Graph colored using " + algorithm);
+                drawGraph();
+            }
+            
+            // Set status message
+            function setStatusMessage(message) {
+                document.getElementById('statusMessage').textContent = message;
+                
+                // Clear message after 3 seconds
+                setTimeout(() => {
+                    document.getElementById('statusMessage').textContent = "Ready";
+                }, 3000);
+            }
+            
+            // Event Listeners
+            canvas.addEventListener('mousedown', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const graphPos = screenToGraph(x, y);
+                
+                if (e.button === 0) { // Left click
+                    if (viewState.mode === 'addVertex') {
+                        addVertex(graphPos.x, graphPos.y);
+                        setStatusMessage("Vertex added");
+                    } else {
+                        const vertex = findVertexAt(graphPos.x, graphPos.y);
+                        if (vertex) {
+                            viewState.selectedVertex = vertex.id;
+                            
+                            if (viewState.mode === 'addEdge') {
+                                if (viewState.lastSelectedVertex) {
+                                    if (addEdge(viewState.lastSelectedVertex, vertex.id)) {
+                                        setStatusMessage("Edge added");
+                                    }
+                                    viewState.lastSelectedVertex = null;
+                                    viewState.mode = 'select';
+                                } else {
+                                    viewState.lastSelectedVertex = vertex.id;
+                                }
+                            }
+                        } else {
+                            viewState.selectedVertex = null;
+                        }
+                        
+                        // Start panning
+                        viewState.dragging = true;
+                        viewState.lastX = x;
+                        viewState.lastY = y;
+                    }
+                }
+                
+                drawGraph();
+            });
+            
+            canvas.addEventListener('mousemove', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const graphPos = screenToGraph(x, y);
+                
+                // Update tooltip position
+                tooltip.style.left = (e.clientX + 10) + 'px';
+                tooltip.style.top = (e.clientY + 10) + 'px';
+                
+                // Find vertex under cursor
+                const vertex = findVertexAt(graphPos.x, graphPos.y);
+                if (vertex) {
+                    viewState.hoverVertex = vertex.id;
+                    tooltip.style.display = 'block';
+                    tooltip.innerHTML = `Vertex ${vertex.id}<br>X: ${Math.round(vertex.x)} Y: ${Math.round(vertex.y)}`;
+                } else {
+                    viewState.hoverVertex = null;
+                    tooltip.style.display = 'none';
+                }
+                
+                // Handle panning
+                if (viewState.dragging) {
+                    const dx = x - viewState.lastX;
+                    const dy = y - viewState.lastY;
+                    
+                    viewState.offsetX += dx;
+                    viewState.offsetY += dy;
+                    
+                    viewState.lastX = x;
+                    viewState.lastY = y;
+                    
+                    drawGraph();
+                } else {
+                    drawGraph();
+                }
+            });
+            
+            canvas.addEventListener('mouseup', () => {
+                viewState.dragging = false;
+            });
+            
+            canvas.addEventListener('mouseleave', () => {
+                viewState.dragging = false;
+                viewState.hoverVertex = null;
+                tooltip.style.display = 'none';
+                drawGraph();
+            });
+            
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                const newScale = viewState.scale * delta;
+                
+                // Limit scale
+                if (newScale > 0.1 && newScale < 5) {
+                    // Adjust offset to zoom toward mouse position
+                    viewState.offsetX = x - (x - viewState.offsetX) * delta;
+                    viewState.offsetY = y - (y - viewState.offsetY) * delta;
+                    
+                    viewState.scale = newScale;
+                    drawGraph();
+                }
+            });
+            
+            // Button event listeners
+            document.getElementById('addVertexBtn').addEventListener('click', () => {
+                viewState.mode = 'addVertex';
+                setStatusMessage("Click on canvas to add a vertex");
+            });
+            
+            document.getElementById('addEdgeBtn').addEventListener('click', () => {
+                viewState.mode = 'addEdge';
+                viewState.lastSelectedVertex = null;
+                setStatusMessage("Select first vertex for the edge");
+            });
+            
+            document.getElementById('triangulateBtn').addEventListener('click', triangulate);
+            
+            document.getElementById('clearBtn').addEventListener('click', () => {
+                graph = { vertices: [], edges: [], triangles: [] };
+                updateCounts();
+                setStatusMessage("Graph cleared");
+                drawGraph();
+            });
+            
+            document.getElementById('randomGraphBtn').addEventListener('click', () => {
+                const count = parseInt(document.getElementById('vertexCount').value) || 10;
+                
+                // Clear existing graph
+                graph = { vertices: [], edges: [], triangles: [] };
+                
+                // Add random vertices
+                for (let i = 0; i < count; i++) {
+                    const x = 100 + Math.random() * (canvas.width - 200);
+                    const y = 100 + Math.random() * (canvas.height - 200);
+                    addVertex(x, y);
+                }
+                
+                // Add some random edges
+                for (let i = 0; i < count * 1.5; i++) {
+                    const v1 = Math.floor(Math.random() * graph.vertices.length) + 1;
+                    let v2 = Math.floor(Math.random() * graph.vertices.length) + 1;
+                    
+                    // Ensure v2 is different from v1
+                    while (v2 === v1) {
+                        v2 = Math.floor(Math.random() * graph.vertices.length) + 1;
+                    }
+                    
+                    addEdge(v1, v2);
+                }
+                
+                setStatusMessage("Random graph generated with " + count + " vertices");
+                drawGraph();
+            });
+            
+            document.getElementById('colorizeBtn').addEventListener('click', colorGraph);
+            
+            document.getElementById('clearColorsBtn').addEventListener('click', () => {
+                for (const vertex of graph.vertices) {
+                    vertex.color = null;
+                }
+                setStatusMessage("Colors cleared");
+                drawGraph();
+            });
+            
+            document.getElementById('zoomInBtn').addEventListener('click', () => {
+                viewState.scale *= 1.2;
+                drawGraph();
+            });
+            
+            document.getElementById('zoomOutBtn').addEventListener('click', () => {
+                viewState.scale /= 1.2;
+                drawGraph();
+            });
+            
+            document.getElementById('resetViewBtn').addEventListener('click', () => {
+                viewState.scale = 1;
+                viewState.offsetX = 0;
+                viewState.offsetY = 0;
+                setStatusMessage("View reset");
+                drawGraph();
+            });
+            
+            // Color palette selection
+            document.querySelectorAll('.color-box').forEach(box => {
+                box.addEventListener('click', () => {
+                    document.querySelectorAll('.color-box').forEach(b => b.classList.remove('active'));
+                    box.classList.add('active');
+                });
+            });
+            
+            // Toggle options
+            document.getElementById('showLabels').addEventListener('change', drawGraph);
+            document.getElementById('showGrid').addEventListener('change', drawGraph);
+            
+            // Initialize with a sample graph
+            initSampleGraph();
+            setStatusMessage("Welcome to PLANAR. Loaded sample graph.");
+        });
+    </script>
 </body>
 </html>
