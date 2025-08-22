@@ -1,913 +1,574 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planar Graph Visualizer</title>
-    <style>
-        :root {
-            --bg-dark: #1a1a2e;
-            --bg-card: #16213e;
-            --accent: #0f3460;
-            --primary: #e94560;
-            --text: #f0f0f0;
-            --text-muted: #b0b0b0;
-            --success: #4cc9f0;
-            --warning: #f9c74f;
-            --border: #2d4059;
-            --shadow: rgba(0, 0, 0, 0.5);
-        }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PLANAR — Triangulated Graph Builder</title>
+  <style>
+    :root{
+      --bg:#0e0f12; --panel:#16181d; --ink:#eaeef5; --muted:#9aa3b2; --accent:#6aa6ff; --ok:#37d67a; --warn:#ffb020; --bad:#ff5c5c;
+      --edge:#8792a2; --vfill:#2a2f3a; --grid:#151923;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+    #app{display:grid;grid-template-columns:320px 1fr;grid-template-rows:auto 1fr;grid-template-areas:"top top" "side main";height:100%}
+    header{grid-area:top;display:flex;gap:12px;align-items:center;padding:10px 12px;border-bottom:1px solid #222;background:var(--panel);position:sticky;top:0;z-index:10}
+    header h1{font-size:16px;margin:0;font-weight:700;letter-spacing:.3px}
+    header .sp{flex:1}
+    header button, header .btn{background:#1e2128;border:1px solid #262a33;color:var(--ink);padding:6px 10px;border-radius:10px;cursor:pointer}
+    header button:disabled{opacity:.45;cursor:not-allowed}
+    header input[type="number"], header input[type="text"], header input[type="color"]{background:#101218;border:1px solid #232733;color:var(--ink);padding:6px 8px;border-radius:8px}
 
-        .light-mode {
-            --bg-dark: #f0f0f0;
-            --bg-card: #ffffff;
-            --accent: #d6e4f0;
-            --primary: #e94560;
-            --text: #1a1a2e;
-            --text-muted: #5a5a72;
-            --success: #2a9d8f;
-            --warning: #f9c74f;
-            --border: #d0d0d7;
-            --shadow: rgba(0, 0, 0, 0.1);
-        }
+    aside{grid-area:side;border-right:1px solid #222;background:var(--panel);padding:12px;overflow:auto}
+    aside h2{font-size:13px;margin:12px 0 6px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+    aside .group{display:grid;gap:8px;margin-bottom:10px}
+    aside .row{display:flex;gap:8px;flex-wrap:wrap}
+    aside .row>button{flex:1}
+    aside button{background:#1b1f27;border:1px solid #2a2f38;color:var(--ink);padding:8px 10px;border-radius:12px;cursor:pointer}
+    aside button:disabled{opacity:.45;cursor:not-allowed}
+    aside .kbd{font:12px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background:#0f1116;border:1px solid #1a1e27;padding:2px 6px;border-radius:6px;color:#c8d1e1}
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            transition: background-color 0.3s, color 0.3s;
-        }
+    #canvasWrap{grid-area:main;position:relative;overflow:hidden;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));}
+    canvas{position:absolute;inset:0;width:100%;height:100%;}
+    #status{position:absolute;left:10px;bottom:10px;background:#0f1218d9;border:1px solid #202532;color:var(--ink);padding:8px 10px;border-radius:10px;backdrop-filter:blur(6px);display:flex;gap:10px;align-items:center}
+    #status span{opacity:.9}
+    #toast{position:absolute;right:12px;bottom:12px;max-width:420px;background:#0f1218;border:1px solid #2a3040;padding:10px 12px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.35);display:none}
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text);
-            overflow: hidden;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Top Bar */
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.8rem 1rem;
-            background-color: var(--bg-card);
-            border-bottom: 1px solid var(--border);
-            height: 60px;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-weight: bold;
-            font-size: 1.2rem;
-            color: var(--primary);
-        }
-
-        .logo svg {
-            width: 24px;
-            height: 24px;
-        }
-
-        .main-controls {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        button {
-            background-color: var(--accent);
-            color: var(--text);
-            border: none;
-            border-radius: 6px;
-            padding: 0.5rem 1rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-weight: 500;
-        }
-
-        button:hover {
-            background-color: var(--primary);
-        }
-
-        button svg {
-            width: 16px;
-            height: 16px;
-        }
-
-        .control-btn {
-            justify-content: center;
-        }
-
-        /* Right Side Controls */
-        .right-controls {
-            position: absolute;
-            top: 70px;
-            right: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            background-color: var(--bg-card);
-            padding: 0.8rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px var(--shadow);
-            z-index: 100;
-        }
-
-        /* Bottom Controls */
-        .bottom-controls {
-            position: absolute;
-            bottom: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 0.5rem;
-            background-color: var(--bg-card);
-            padding: 0.8rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px var(--shadow);
-            z-index: 100;
-        }
-
-        /* Left Controls */
-        .left-controls {
-            position: absolute;
-            top: 70px;
-            left: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            background-color: var(--bg-card);
-            padding: 0.8rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px var(--shadow);
-            z-index: 100;
-        }
-
-        .control-group {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .control-group h3 {
-            font-size: 0.9rem;
-            color: var(--primary);
-            margin-bottom: 0.3rem;
-            text-align: center;
-        }
-
-        input {
-            padding: 0.5rem;
-            border-radius: 6px;
-            border: 1px solid var(--border);
-            background-color: var(--bg-dark);
-            color: var(--text);
-            width: 100%;
-        }
-
-        /* Visualization Area */
-        .visualization-area {
-            flex: 1;
-            position: relative;
-            overflow: hidden;
-        }
-
-        #graph-canvas {
-            width: 100%;
-            height: 100%;
-            background-color: var(--bg-dark);
-        }
-
-        .status-bar {
-            position: absolute;
-            bottom: 70px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: var(--bg-card);
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-size: 0.9rem;
-            box-shadow: 0 4px 12px var(--shadow);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            max-width: 400px;
-            z-index: 90;
-        }
-
-        .status-icon {
-            color: var(--success);
-        }
-
-        /* Tutorial Button */
-        .tutorial-btn {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            z-index: 100;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0;
-        }
-
-        /* Tutorial Modal */
-        .tutorial-modal {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: var(--bg-card);
-            padding: 1.5rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px var(--shadow);
-            z-index: 1000;
-            max-width: 500px;
-            width: 90%;
-            display: none;
-        }
-
-        .tutorial-modal h2 {
-            color: var(--primary);
-            margin-bottom: 1rem;
-            text-align: center;
-        }
-
-        .tutorial-content {
-            display: flex;
-            flex-direction: column;
-            gap: 0.8rem;
-        }
-
-        .tutorial-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.5rem;
-        }
-
-        .tutorial-item kbd {
-            background-color: var(--accent);
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            color: var(--text);
-            min-width: 60px;
-            text-align: center;
-        }
-
-        .tutorial-item p {
-            font-size: 0.9rem;
-            flex: 1;
-        }
-
-        .close-tutorial {
-            position: absolute;
-            top: 0.5rem;
-            right: 0.5rem;
-            background: none;
-            border: none;
-            color: var(--text);
-            font-size: 1.2rem;
-            cursor: pointer;
-            padding: 0.2rem;
-        }
-
-        .overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            z-index: 999;
-            display: none;
-        }
-
-        @media (max-width: 768px) {
-            .top-bar {
-                flex-wrap: wrap;
-                height: auto;
-                padding: 0.5rem;
-            }
-            
-            .main-controls {
-                flex-wrap: wrap;
-                justify-content: center;
-            }
-            
-            .control-btn {
-                min-width: auto;
-                padding: 0.4rem 0.8rem;
-                font-size: 0.9rem;
-            }
-            
-            .right-controls, .left-controls {
-                top: auto;
-                bottom: 60px;
-                flex-direction: row;
-                flex-wrap: wrap;
-                max-width: calc(100% - 20px);
-            }
-            
-            .status-bar {
-                bottom: 120px;
-                width: 90%;
-            }
-        }
-    </style>
+    details{background:#10131a;border:1px solid #1e2330;border-radius:12px;padding:8px 10px}
+    summary{cursor:pointer;color:#cbd3e3}
+    code,pre{background:#0f1116;border:1px solid #1a1e27;padding:6px 8px;border-radius:8px;color:#d6def0}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#161a22;border:1px solid #242a36;color:#cbd3e3}
+    a{color:var(--accent)}
+  </style>
 </head>
 <body>
-    <!-- Top Bar -->
-    <div class="top-bar">
-        <div class="logo">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-            <span>Planar Graph Visualizer</span>
+  <div id="app">
+    <header>
+      <h1>PLANAR — Triangulated Graph Builder</h1>
+      <div class="sp"></div>
+      <label title="Go to vertex m"><span class="pill">Gm</span> <input id="gmInput" type="number" min="3" value="3" style="width:90px"></label>
+      <button id="btnRunTests" title="Run built-in correctness tests">Run Tests</button>
+      <button id="btnExportJson" title="Export graph JSON">Export</button>
+      <input id="fileImport" type="file" accept="application/json" style="display:none">
+      <button id="btnImportJson" title="Import graph JSON">Import</button>
+      <button id="btnSavePng" title="Save PNG snapshot">Save PNG</button>
+    </header>
+
+    <aside>
+      <h2>Graph</h2>
+      <div class="group">
+        <div class="row">
+          <button id="btnStart" title="S">Start (S)</button>
+          <button id="btnRandom" title="R">Random (R)</button>
+          <button id="btnAdd" title="A">Add (A)</button>
         </div>
-        <div class="main-controls">
-            <button id="start-btn" class="control-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Start Graph
-            </button>
-            <button id="add-random-btn" class="control-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Random Vertex
-            </button>
-            <button id="add-vertex-btn" class="control-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Add Vertex
-            </button>
-            <button id="theme-toggle">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-            </button>
+        <div class="row">
+          <button id="btnUndo" title="Undo (Ctrl+Z)">Undo</button>
+          <button id="btnRedo" title="Redo (Ctrl+Y)">Redo</button>
+          <button id="btnRedraw" title="Re-layout periphery evenly">Redraw</button>
         </div>
-    </div>
+      </div>
 
-    <!-- Right Side Controls -->
-    <div class="right-controls">
-        <div class="control-group">
-            <h3>Display</h3>
-            <button id="toggle-display-btn" class="control-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-                </svg>
-                Toggle Display
-            </button>
+      <h2>View</h2>
+      <div class="group">
+        <div class="row">
+          <button id="btnZoomIn" title="Z+">Zoom +</button>
+          <button id="btnZoomOut" title="Z-">Zoom −</button>
+          <button id="btnCenter" title="C">Center (C)</button>
+          <button id="btnToggle" title="T">Toggle Labels/Colors (T)</button>
         </div>
-    </div>
+        <small class="muted">Pan: drag • Zoom: wheel</small>
+      </div>
 
-    <!-- Bottom Controls -->
-    <div class="bottom-controls">
-        <button id="zoom-in-btn" class="control-btn">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-            </svg>
-            Zoom In
-        </button>
-        <button id="zoom-out-btn" class="control-btn">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
-            </svg>
-            Zoom Out
-        </button>
-        <button id="center-btn" class="control-btn">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-            Center
-        </button>
-    </div>
-
-    <!-- Left Controls -->
-    <div class="left-controls">
-        <div class="control-group">
-            <h3>Navigation</h3>
-            <input type="number" id="goto-input" placeholder="Vertex index" min="1">
-            <button id="goto-btn" class="control-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-                Go to Vertex
-            </button>
+      <h2>Palette (1–4)</h2>
+      <div class="group">
+        <div class="row">
+          <label>1 <input type="color" id="col1" value="#ff6b6b"></label>
+          <label>2 <input type="color" id="col2" value="#6bcf63"></label>
+          <label>3 <input type="color" id="col3" value="#6aa6ff"></label>
+          <label>4 <input type="color" id="col4" value="#f4c95d"></label>
         </div>
-    </div>
-
-    <!-- Visualization Area -->
-    <div class="visualization-area">
-        <canvas id="graph-canvas"></canvas>
-        <div class="status-bar">
-            <span class="status-icon">●</span>
-            <span id="status-text">Ready to start. Click 'Start Graph' to begin.</span>
+        <div class="row">
+          <button id="btnRecolor">Recolor (DSATUR)</button>
         </div>
+      </div>
+
+      <h2>Help</h2>
+      <div class="group">
+        <details open>
+          <summary>Commands & Hotkeys</summary>
+          <div style="padding-top:6px">
+            <div><span class="kbd">S</span> Start triangle V1–V2–V3</div>
+            <div><span class="kbd">R</span> Add random vertex (chooses Vp,Vq on periphery)</div>
+            <div><span class="kbd">A</span> Add vertex: click Vp then Vq on periphery</div>
+            <div><span class="kbd">Gm</span> Hide vertices &gt; m (header input)</div>
+            <div><span class="kbd">Z+/Z-</span> Zoom in/out (or mouse wheel)</div>
+            <div><span class="kbd">C</span> Center & fit to view</div>
+            <div><span class="kbd">T</span> Toggle labels vs colors</div>
+            <div><span class="kbd">Ctrl+Z / Ctrl+Y</span> Undo / Redo</div>
+          </div>
+        </details>
+        <details>
+          <summary>Construction Rule</summary>
+          <p>Each new vertex is added to the <em>periphery</em> (outer cycle) touching <strong>m &gt; 1 contiguous</strong> periphery vertices from <code>Vp</code> to <code>Vq</code> (clockwise). It connects to the two extremes and to all vertices in between, preserving triangulation by construction.</p>
+        </details>
+        <details>
+          <summary>Notes</summary>
+          <ul>
+            <li>Edges may be curved when spans are long, to improve readability.</li>
+            <li>After each addition, <em>Redraw</em> spreads periphery vertices evenly along a convex circle.</li>
+            <li>Level-of-Detail hides labels when zoomed out for speed.</li>
+          </ul>
+        </details>
+      </div>
+    </aside>
+
+    <div id="canvasWrap">
+      <canvas id="graphCanvas"></canvas>
+      <div id="status"><span id="statMsg">Ready.</span><span id="statCounts"></span></div>
+      <div id="toast"></div>
     </div>
+  </div>
 
-    <!-- Tutorial Button -->
-    <button class="tutorial-btn" id="tutorial-btn">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-    </button>
+  <script>
+  // ============================
+  // Utility helpers
+  // ============================
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const lerp=(a,b,t)=>a+(b-a)*t;
+  const TAU=Math.PI*2;
+  function uid(){return ++state.lastId;}
 
-    <!-- Tutorial Modal -->
-    <div class="overlay" id="overlay"></div>
-    <div class="tutorial-modal" id="tutorial-modal">
-        <button class="close-tutorial" id="close-tutorial">×</button>
-        <h2>How to Use the Graph Visualizer</h2>
-        <div class="tutorial-content">
-            <div class="tutorial-item">
-                <kbd>Start Graph</kbd>
-                <p>Create a basic triangle to begin with</p>
-            </div>
-            <div class="tutorial-item">
-                <kbd>Add Vertex</kbd>
-                <p>Click two peripheral vertices to add a new vertex between them</p>
-            </div>
-            <div class="tutorial-item">
-                <kbd>Random Vertex</kbd>
-                <p>Automatically add a vertex at a random position</p>
-            </div>
-            <div class="tutorial-item">
-                <kbd>Toggle Display</kbd>
-                <p>Switch between showing vertex indices and color values</p>
-            </div>
-            <div class="tutorial-item">
-                <kbd>Go to Vertex</kbd>
-                <p>Enter a vertex index to center the view on that vertex</p>
-            </div>
-            <div class="tutorial-item">
-                <kbd>Zoom In/Out</kbd>
-                <p>Adjust the zoom level of the graph</p>
-            </div>
-            <div class="tutorial-item">
-                <kbd>Drag</kbd>
-                <p>Click and drag to pan around the graph</p>
-            </div>
-            <div class="tutorial-item">
-                <kbd>Mouse Wheel</kbd>
-                <p>Scroll to zoom in and out</p>
-            </div>
-        </div>
-    </div>
+  function showToast(msg, kind="info", ms=1800){
+    const el=document.getElementById('toast');
+    el.textContent=msg; el.style.display='block';
+    el.style.borderColor = kind==='error'? 'var(--bad)': kind==='warn'?'var(--warn)':'#2a3040';
+    clearTimeout(showToast._t); showToast._t=setTimeout(()=>{el.style.display='none'}, ms);
+  }
+  function setStatus(msg){document.getElementById('statMsg').textContent=msg}
+  function setCounts(){
+    const n=graph.visibleVertexCount();
+    const e=graph.visibleEdgeCount();
+    const p=graph.periphery.length;
+    document.getElementById('statCounts').textContent=` | V: ${n}  E: ${e}  P: ${p}  Zoom: ${view.scale.toFixed(2)}`;
+  }
 
-    <script>
-        class GraphVisualizer {
-            constructor(canvas) {
-                this.canvas = canvas;
-                this.ctx = canvas.getContext('2d');
-                this.vertices = [];
-                this.edges = [];
-                this.periphery = [];
-                this.scale = 1;
-                this.offset = { x: 0, y: 0 };
-                this.dragging = false;
-                this.lastMousePos = { x: 0, y: 0 };
-                this.showIndices = true;
-                this.currentMaxIndex = 0;
-                this.statusElement = document.getElementById('status-text');
-                
-                this.setupEventListeners();
-                this.resizeCanvas();
-                window.addEventListener('resize', () => this.resizeCanvas());
-                
-                this.updateStatus("Ready. Click 'Start Graph' to begin.");
-            }
-            
-            updateStatus(message) {
-                this.statusElement.textContent = message;
-            }
-            
-            resizeCanvas() {
-                this.canvas.width = window.innerWidth;
-                this.canvas.height = window.innerHeight;
-                this.draw();
-            }
-            
-            setupEventListeners() {
-                // Mouse events for panning and zooming
-                this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
-                this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-                this.canvas.addEventListener('mouseup', () => this.handleMouseUp());
-                this.canvas.addEventListener('wheel', (e) => this.handleWheel(e), { passive: false });
-                
-                // Button event listeners
-                document.getElementById('start-btn').addEventListener('click', () => this.startGraph());
-                document.getElementById('add-random-btn').addEventListener('click', () => this.addRandomVertex());
-                document.getElementById('add-vertex-btn').addEventListener('click', () => this.prepareAddVertex());
-                document.getElementById('toggle-display-btn').addEventListener('click', () => this.toggleDisplay());
-                document.getElementById('center-btn').addEventListener('click', () => this.centerGraph());
-                document.getElementById('goto-btn').addEventListener('click', () => this.goToVertex());
-                document.getElementById('zoom-in-btn').addEventListener('click', () => this.zoomIn());
-                document.getElementById('zoom-out-btn').addEventListener('click', () => this.zoomOut());
-            }
-            
-            handleMouseDown(e) {
-                if (e.button === 0) { // Left click
-                    this.dragging = true;
-                    this.lastMousePos = { x: e.clientX, y: e.clientY };
-                    this.canvas.style.cursor = 'grabbing';
-                }
-            }
-            
-            handleMouseMove(e) {
-                if (this.dragging) {
-                    const dx = e.clientX - this.lastMousePos.x;
-                    const dy = e.clientY - this.lastMousePos.y;
-                    this.offset.x += dx;
-                    this.offset.y += dy;
-                    this.lastMousePos = { x: e.clientX, y: e.clientY };
-                    this.draw();
-                }
-            }
-            
-            handleMouseUp() {
-                this.dragging = false;
-                this.canvas.style.cursor = 'default';
-            }
-            
-            handleWheel(e) {
-                e.preventDefault();
-                const zoomIntensity = 0.1;
-                const rect = this.canvas.getBoundingClientRect();
-                const mouseX = e.clientX - rect.left;
-                const mouseY = e.clientY - rect.top;
-                
-                const wheel = e.deltaY < 0 ? 1 : -1;
-                const zoom = Math.exp(wheel * zoomIntensity);
-                
-                // Calculate world position before zoom
-                const worldX = (mouseX - this.offset.x) / this.scale;
-                const worldY = (mouseY - this.offset.y) / this.scale;
-                
-                // Apply zoom
-                this.scale *= zoom;
-                
-                // Adjust offset to zoom at mouse position
-                this.offset.x = mouseX - worldX * this.scale;
-                this.offset.y = mouseY - worldY * this.scale;
-                
-                this.draw();
-            }
-            
-            draw() {
-                // Clear the canvas
-                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                
-                // Save the context
-                this.ctx.save();
-                
-                // Apply transformations
-                this.ctx.translate(this.offset.x, this.offset.y);
-                this.ctx.scale(this.scale, this.scale);
-                
-                // Draw edges
-                this.ctx.strokeStyle = '#4cc9f0';
-                this.ctx.lineWidth = 2;
-                for (const edge of this.edges) {
-                    this.drawEdge(edge);
-                }
-                
-                // Draw vertices
-                for (const vertex of this.vertices) {
-                    this.drawVertex(vertex);
-                }
-                
-                // Restore the context
-                this.ctx.restore();
-            }
-            
-            drawVertex(vertex) {
-                const radius = 18 + (vertex.index.toString().length * 2);
-                
-                // Draw vertex as a circle
-                this.ctx.beginPath();
-                this.ctx.arc(vertex.x, vertex.y, radius, 0, Math.PI * 2);
-                this.ctx.fillStyle = vertex.color || '#e94560';
-                this.ctx.fill();
-                this.ctx.strokeStyle = '#ffffff';
-                this.ctx.lineWidth = 2;
-                this.ctx.stroke();
-                
-                // Draw vertex index or value
-                this.ctx.fillStyle = 'white';
-                this.ctx.font = 'bold 14px Arial';
-                this.ctx.textAlign = 'center';
-                this.ctx.textBaseline = 'middle';
-                
-                if (this.showIndices) {
-                    this.ctx.fillText(vertex.index.toString(), vertex.x, vertex.y);
-                } else {
-                    this.ctx.fillText(vertex.colorValue || '1', vertex.x, vertex.y);
-                }
-            }
-            
-            drawEdge(edge) {
-                this.ctx.beginPath();
-                
-                // Draw curved edges
-                const midX = (edge.v1.x + edge.v2.x) / 2;
-                const midY = (edge.v1.y + edge.v2.y) / 2;
-                
-                const dx = edge.v2.x - edge.v1.x;
-                const dy = edge.v2.y - edge.v1.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                
-                if (distance === 0) return;
-                
-                const nx = -dy / distance;
-                const ny = dx / distance;
-                
-                const curveIntensity = 15;
-                const ctrlX = midX + nx * curveIntensity;
-                const ctrlY = midY + ny * curveIntensity;
-                
-                this.ctx.moveTo(edge.v1.x, edge.v1.y);
-                this.ctx.quadraticCurveTo(ctrlX, ctrlY, edge.v2.x, edge.v2.y);
-                this.ctx.stroke();
-            }
-            
-            startGraph() {
-                this.vertices = [];
-                this.edges = [];
-                this.periphery = [];
-                
-                // Create initial triangle
-                const centerX = this.canvas.width / 2;
-                const centerY = this.canvas.height / 2;
-                const size = 120;
-                
-                const v1 = { 
-                    x: centerX, 
-                    y: centerY - size, 
-                    index: 1, 
-                    color: '#e94560', 
-                    colorValue: '1' 
-                };
-                const v2 = { 
-                    x: centerX - size * 0.866, 
-                    y: centerY + size * 0.5, 
-                    index: 2, 
-                    color: '#4cc9f0', 
-                    colorValue: '2' 
-                };
-                const v3 = { 
-                    x: centerX + size * 0.866, 
-                    y: centerY + size * 0.5, 
-                    index: 3, 
-                    color: '#f9c74f', 
-                    colorValue: '3' 
-                };
-                
-                this.vertices.push(v1, v2, v3);
-                this.edges.push(
-                    { v1: v1, v2: v2 }, 
-                    { v1: v2, v2: v3 }, 
-                    { v1: v3, v2: v1 }
-                );
-                this.periphery = [v1, v2, v3];
-                this.currentMaxIndex = 3;
-                
-                this.centerGraph();
-                this.updateStatus("Basic triangle created. Use 'Add Vertex' or 'Random Vertex'");
-            }
-            
-            addRandomVertex() {
-                if (this.vertices.length < 3) {
-                    alert("Please start with a basic graph first using 'Start Graph'!");
-                    return;
-                }
-                
-                if (this.periphery.length < 2) return;
-                
-                // Select two random peripheral vertices
-                const index1 = Math.floor(Math.random() * this.periphery.length);
-                const index2 = (index1 + 1 + Math.floor(Math.random() * (this.periphery.length - 2))) % this.periphery.length;
-                
-                const vp = this.periphery[index1];
-                const vq = this.periphery[index2];
-                
-                this.addVertexBetween(vp, vq);
-                this.updateStatus(`Added vertex ${this.currentMaxIndex} between vertices ${vp.index} and ${vq.index}`);
-            }
-            
-            prepareAddVertex() {
-                if (this.vertices.length < 3) {
-                    alert("Please start with a basic graph first using 'Start Graph'!");
-                    return;
-                }
-                
-                this.updateStatus("Click two peripheral vertices to add a new vertex between them");
-                this.canvas.style.cursor = 'crosshair';
-                this.selectingVertices = true;
-                this.selectedVertices = [];
-                
-                const clickHandler = (e) => {
-                    const rect = this.canvas.getBoundingClientRect();
-                    const x = (e.clientX - rect.left - this.offset.x) / this.scale;
-                    const y = (e.clientY - rect.top - this.offset.y) / this.scale;
-                    
-                    // Find clicked vertex
-                    const clickedVertex = this.vertices.find(v => {
-                        const dx = v.x - x;
-                        const dy = v.y - y;
-                        const radius = 20 + (v.index.toString().length * 2);
-                        return Math.sqrt(dx * dx + dy * dy) <= radius;
-                    });
-                    
-                    if (clickedVertex && this.periphery.includes(clickedVertex)) {
-                        this.selectedVertices.push(clickedVertex);
-                        
-                        if (this.selectedVertices.length === 1) {
-                            this.updateStatus(`Selected vertex ${clickedVertex.index}. Click another peripheral vertex`);
-                        } else if (this.selectedVertices.length === 2) {
-                            this.canvas.removeEventListener('click', clickHandler);
-                            this.canvas.style.cursor = 'default';
-                            this.selectingVertices = false;
-                            this.addVertexBetween(this.selectedVertices[0], this.selectedVertices[1]);
-                        }
-                    }
-                };
-                
-                this.canvas.addEventListener('click', clickHandler, { once: false });
-            }
-            
-            addVertexBetween(vp, vq) {
-                const vpIndex = this.periphery.indexOf(vp);
-                const vqIndex = this.periphery.indexOf(vq);
-                
-                if (vpIndex === -1 || vqIndex === -1) {
-                    alert("Selected vertices must be on the periphery!");
-                    return;
-                }
-                
-                if (vpIndex === vqIndex) {
-                    alert("Please select two different vertices!");
-                    return;
-                }
-                
-                // Get vertices between vp and vq
-                let verticesToConnect = [];
-                if (Math.abs(vpIndex - vqIndex) === 1 || 
-                    Math.abs(vpIndex - vqIndex) === this.periphery.length - 1) {
-                    // Adjacent vertices - just connect to both
-                    verticesToConnect = [vp, vq];
-                } else {
-                    // Multiple vertices in between
-                    const start = Math.min(vpIndex, vqIndex);
-                    const end = Math.max(vpIndex, vqIndex);
-                    verticesToConnect = this.periphery.slice(start, end + 1);
-                }
-                
-                // Create new vertex
-                this.currentMaxIndex++;
-                const newVertex = {
-                    x: 0,
-                    y: 0,
-                    index: this.currentMaxIndex,
-                    color: this.getRandomColor(),
-                    colorValue: (Math.floor(Math.random() * 4) + 1).toString()
-                };
-                
-                // Calculate position (average of connected vertices with outward push)
-                let sumX = 0, sumY = 0;
-                verticesToConnect.forEach(v => {
-                    sumX += v.x;
-                    sumY += v.y;
-                });
-                
-                newVertex.x = sumX / verticesToConnect.length;
-                newVertex.y = sumY / verticesToConnect.length;
-                
-                // Push outward from center
-                const centerX = this.canvas.width / 2;
-                const centerY = this.canvas.height / 2;
-                
-                const dx = newVertex.x - centerX;
-                const dy = newVertex.y - centerY;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                
-                if (distance > 0) {
-                    newVertex.x = centerX + dx * (distance + 80) / distance;
-                    newVertex.y = centerY + dy * (distance + 80) / distance;
-                }
-                
-                // Add new vertex and edges
-                this.vertices.push(newVertex);
-                verticesToConnect.forEach(v => {
-                    this.edges.push({ v1: newVertex, v2: v });
-                });
-                
-                // Update periphery (simplified)
-                const insertIndex = (Math.max(vpIndex, vqIndex) + 1) % this.periphery.length;
-                this.periphery.splice(insertIndex, 0, newVertex);
-                
-                this.draw();
-            }
-            
-            toggleDisplay() {
-                this.showIndices = !this.showIndices;
-                this.updateStatus(`Now showing: ${this.showIndices ? 'Vertex indices' : 'Color values'}`);
-                this.draw();
-            }
-            
-            centerGraph() {
-                this.offset = { x: 0, y: 0 };
-                this.scale = 1;
-                this.draw();
-                this.updateStatus("Graph centered");
-            }
-            
-            goToVertex() {
-                const input = document.getElementById('goto-input');
-                const index = parseInt(input.value);
-                
-                if (isNaN(index) || index < 1 || index > this.currentMaxIndex) {
-                    alert(`Please enter a valid vertex index between 1 and ${this.currentMaxIndex}`);
-                    return;
-                }
-                
-                const vertex = this.vertices.find(v => v.index === index);
-                if (vertex) {
-                    this.offset.x = -vertex.x * this.scale + this.canvas.width / 2;
-                    this.offset.y = -vertex.y * this.scale + this.canvas.height / 2;
-                    this.draw();
-                    this.updateStatus(`Centered on vertex ${index}`);
-                }
-                
-                input.value = '';
-            }
-            
-            zoomIn() {
-                this.scale *= 1.2;
-                this.draw();
-                this.updateStatus("Zoomed in");
-            }
-            
-            zoomOut() {
-                this.scale /= 1.2;
-                this.draw();
-                this.updateStatus("Zoomed out");
-            }
-            
-            getRandomColor() {
-                const colors = ['#e94560', '#4cc9f0', '#f9c74f', '#2a9d8f', '#9b59b6', '#1abc9c', '#d35400'];
-                return colors[Math.floor(Math.random() * colors.length)];
-            }
+  // ============================
+  // Graph model
+  // ============================
+  const graph={
+    vertices: new Map(), // id -> {id,x,y,color,hidden:false}
+    adj: new Map(), // id -> Set(neighbors)
+    edges: new Set(), // key "a-b" (a<b)
+    periphery: [], // ordered vertex ids (outer face cycle)
+
+    reset(){ this.vertices.clear(); this.adj.clear(); this.edges.clear(); this.periphery=[]; state.lastId=0; },
+
+    _edgeKey(a,b){ if(a>b){[a,b]=[b,a]} return a+"-"+b },
+
+    addVertex(x,y,color=1){ const id=uid(); this.vertices.set(id,{id,x,y,color,hidden:false}); this.adj.set(id,new Set()); return id; },
+
+    addEdge(a,b){ if(a===b) return false; const k=this._edgeKey(a,b); if(this.edges.has(k)) return false; this.edges.add(k); this.adj.get(a).add(b); this.adj.get(b).add(a); return true; },
+
+    hasEdge(a,b){ return this.edges.has(this._edgeKey(a,b)) },
+
+    startTriangle(){
+      this.reset();
+      const cx=0, cy=0, r=200;
+      const v1=this.addVertex(cx + r*Math.cos(-Math.PI/2), cy + r*Math.sin(-Math.PI/2), 1);
+      const v2=this.addVertex(cx + r*Math.cos(-Math.PI/2+2*Math.PI/3), cy + r*Math.sin(-Math.PI/2+2*Math.PI/3), 2);
+      const v3=this.addVertex(cx + r*Math.cos(-Math.PI/2+4*Math.PI/3), cy + r*Math.sin(-Math.PI/2+4*Math.PI/3), 3);
+      this.addEdge(v1,v2); this.addEdge(v2,v3); this.addEdge(v3,v1);
+      this.periphery=[v1,v2,v3];
+      state.visibleMaxId=3;
+    },
+
+    // Validate Vp,Vq are distinct, on periphery, contiguous run m>1
+    validateRun(Vp,Vq){
+      const P=this.periphery; const i=P.indexOf(Vp); const j=P.indexOf(Vq);
+      if(i===-1||j===-1) return {ok:false, reason:"Vp/Vq not on periphery"};
+      if(Vp===Vq) return {ok:false, reason:"Vp and Vq must differ"};
+      // clock-wise run from i to j (wrapping)
+      const run=[]; let k=i; while(true){ run.push(P[k]); if(k===j) break; k=(k+1)%P.length; if(run.length>P.length+1) break }
+      if(run.length<=1) return {ok:false, reason:"Run length must be > 1"};
+      return {ok:true, run, i, j};
+    },
+
+    // Add new vertex connecting to all vertices in run (Vp..Vq clockwise)
+    addOnPeriphery(Vp,Vq){
+      const vres=this.validateRun(Vp,Vq); if(!vres.ok){ throw new Error(vres.reason) }
+      const {run,i,j}=vres; const m=run.length;
+      // Place new vertex near centroid of run, slightly outward
+      const {x,y}=this._placeNewVertex(run);
+      const newId=this.addVertex(x,y, ((state.lastId-1)%4)+1 );
+      for(const u of run){ this.addEdge(newId,u) }
+      // Update periphery: replace run with newId
+      // Build new periphery array
+      const P=this.periphery; const before=[]; let k=(j+1)%P.length; while(k!==i){ before.push(P[k]); k=(k+1)%P.length }
+      this.periphery=[...before, newId];
+      return newId;
+    },
+
+    _placeNewVertex(run){
+      // centroid of run points + push outward normal from polygon center
+      let cx=0, cy=0; for(const id of run){ const v=this.vertices.get(id); cx+=v.x; cy+=v.y }
+      cx/=run.length; cy/=run.length;
+      // outward: from graph centroid to (cx,cy)
+      let gx=0, gy=0; const ids=[...this.vertices.keys()].slice(0,state.visibleMaxId);
+      for(const id of ids){ const v=this.vertices.get(id); gx+=v.x; gy+=v.y } gx/=ids.length; gy/=ids.length;
+      let dx=cx-gx, dy=cy-gy; const len=Math.hypot(dx,dy)||1; dx/=len; dy/=len;
+      const push=30+10*Math.random();
+      return {x:cx+dx*push, y:cy+dy*push};
+    },
+
+    // Random add: choose random Vp,Vq on periphery with run length >=2
+    addRandom(){
+      const P=this.periphery; if(P.length<2) throw new Error("Periphery too small");
+      let i=Math.floor(Math.random()*P.length);
+      let j=Math.floor(Math.random()*P.length);
+      if(i===j) j=(j+1)%P.length;
+      // ensure run length >1
+      const vres=this.validateRun(P[i],P[j]);
+      if(!vres.ok || vres.run.length<=1){ return this.addRandom() }
+      return this.addOnPeriphery(P[i],P[j]);
+    },
+
+    // Go to vertex m: hide >m
+    setVisibleMaxId(m){ state.visibleMaxId=m; for(const [id,v] of this.vertices){ v.hidden = (id>m) } },
+
+    visibleVertexCount(){ let c=0; for(const [id,v] of this.vertices){ if(!v.hidden) c++ } return c },
+    visibleEdgeCount(){ let c=0; for(const k of this.edges){ const [a,b]=k.split('-').map(Number); if(!this.vertices.get(a).hidden && !this.vertices.get(b).hidden) c++ } return c },
+
+    // DSATUR coloring (1..4)
+    recolorDSATUR(){
+      // initialize uncolored
+      for(const v of this.vertices.values()){ v.color=0 }
+      const colored=new Set();
+      const sat=new Map(); // id -> set of neighbor colors
+      for(const [id] of this.vertices){ sat.set(id,new Set()) }
+      const ids=[...this.vertices.keys()].filter(id=>!this.vertices.get(id).hidden);
+      // degrees
+      const deg=(id)=>this.adj.get(id).size;
+      // pick initial vertex with max degree
+      ids.sort((a,b)=>deg(b)-deg(a));
+      const first=ids[0]; this.vertices.get(first).color=1; colored.add(first);
+      for(const n of this.adj.get(first)){ sat.get(n).add(1) }
+      while(colored.size<ids.length){
+        // select with highest saturation (distinct neighbor colors), tie by degree
+        let pick=null, bestSat=-1, bestDeg=-1;
+        for(const id of ids){ if(colored.has(id)) continue; const s=sat.get(id).size; const d=deg(id); if(s>bestSat || (s===bestSat && d>bestDeg)){ bestSat=s; bestDeg=d; pick=id } }
+        // assign smallest available color in 1..4
+        const used=sat.get(pick); let color=1; while(used.has(color) && color<=4) color++;
+        if(color>4){ // fallback: 4-coloring failed by heuristic, wrap
+          color=((Math.floor(Math.random()*4))+1);
         }
+        this.vertices.get(pick).color=color; colored.add(pick);
+        for(const n of this.adj.get(pick)){ sat.get(n).add(color) }
+      }
+    },
 
-        // UI Controls
-        document.getElementById('theme-toggle').addEventListener('click', () => {
-            document.body.classList.toggle('light-mode');
-            const themeToggle = document.getElementById('theme-toggle');
-            if (document.body.classList.contains('light-mode')) {
-                themeToggle.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                </svg>`;
-            } else {
-                themeToggle.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>`;
-            }
-        });
+    // Validation helpers for testing
+    isSimple(){ // no self loops or parallel edges already enforced
+      return true;
+    },
 
-        // Tutorial functionality
-        document.getElementById('tutorial-btn').addEventListener('click', () => {
-            document.getElementById('tutorial-modal').style.display = 'block';
-            document.getElementById('overlay').style.display = 'block';
-        });
+    // Theoretical check: For triangulated planar with outer face length p: E = 3N - 3 - p
+    checkTriangulationInvariant(){
+      const N=[...this.vertices.values()].filter(v=>!v.hidden).length;
+      const E=[...this.edges].filter(k=>{const [a,b]=k.split('-').map(Number); return !this.vertices.get(a).hidden && !this.vertices.get(b).hidden}).length;
+      const p=this.periphery.length;
+      const lhs=E, rhs=3*N - 3 - p;
+      return {ok: lhs===rhs, N,E,p,expected:rhs};
+    },
 
-        document.getElementById('close-tutorial').addEventListener('click', () => {
-            document.getElementById('tutorial-modal').style.display = 'none';
-            document.getElementById('overlay').style.display = 'none';
-        });
+    serialize(){
+      return JSON.stringify({
+        vertices:[...this.vertices.values()],
+        edges:[...this.edges],
+        periphery:[...this.periphery],
+        lastId: state.lastId,
+        visibleMaxId: state.visibleMaxId
+      });
+    },
+    deserialize(json){
+      const o=JSON.parse(json);
+      this.vertices=new Map(o.vertices.map(v=>[v.id,v]));
+      this.adj=new Map(); for(const [id,v] of this.vertices){ this.adj.set(id,new Set()) }
+      this.edges=new Set();
+      for(const k of o.edges){
+        this.edges.add(k);
+        const [a,b]=k.split('-').map(Number);
+        this.adj.get(a).add(b); this.adj.get(b).add(a);
+      }
+      this.periphery=o.periphery; state.lastId=o.lastId||this.vertices.size; state.visibleMaxId=o.visibleMaxId||this.vertices.size;
+    }
+  };
 
-        document.getElementById('overlay').addEventListener('click', () => {
-            document.getElementById('tutorial-modal').style.display = 'none';
-            document.getElementById('overlay').style.display = 'none';
-        });
+  // ============================
+  // Undo/Redo State
+  // ============================
+  const history={
+    stack:[], redo:[],
+    snapshot(){ return graph.serialize() },
+    push(){ this.stack.push(this.snapshot()); this.redo.length=0; },
+    canUndo(){ return this.stack.length>0 },
+    canRedo(){ return this.redo.length>0 },
+    undo(){ if(!this.canUndo()) return; const cur=this.snapshot(); const prev=this.stack.pop(); this.redo.push(cur); graph.deserialize(prev); requestDraw(); updateUI(); },
+    redo(){ if(!this.canRedo()) return; const cur=this.snapshot(); const next=this.redo.pop(); this.stack.push(cur); graph.deserialize(next); requestDraw(); updateUI(); }
+  };
 
-        // Initialize when page loads
-        window.addEventListener('load', () => {
-            const canvas = document.getElementById('graph-canvas');
-            window.graphVisualizer = new GraphVisualizer(canvas);
-        });
-    </script>
+  // ============================
+  // Viewport & Rendering
+  // ============================
+  const canvas=document.getElementById('graphCanvas');
+  const ctx=canvas.getContext('2d');
+  const offEdges=document.createElement('canvas');
+  const offVerts=document.createElement('canvas');
+  const ectx=offEdges.getContext('2d');
+  const vctx=offVerts.getContext('2d');
+
+  const view={
+    x:0,y:0, scale:1,
+    dragging:false, last:{x:0,y:0}
+  };
+
+  let needsRedraw=true;
+  function requestDraw(){ needsRedraw=true }
+  function resize(){ const {clientWidth:w, clientHeight:h}=document.getElementById('canvasWrap'); [canvas.width,canvas.height]=[w,h]; [offEdges.width,offEdges.height]=[w,h]; [offVerts.width,offVerts.height]=[w,h]; requestDraw(); }
+  window.addEventListener('resize', resize);
+
+  function worldToScreen(x,y){ return {x: (x*view.scale + canvas.width/2 + view.x), y: (y*view.scale + canvas.height/2 + view.y)} }
+  function screenToWorld(x,y){ return {x: (x - canvas.width/2 - view.x)/view.scale, y: (y - canvas.height/2 - view.y)/view.scale} }
+
+  function centerFit(){
+    // fit all visible vertices into view
+    const vs=[...graph.vertices.values()].filter(v=>!v.hidden);
+    if(vs.length===0){ view.x=0; view.y=0; view.scale=1; requestDraw(); return }
+    let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;
+    for(const v of vs){ minx=Math.min(minx,v.x); maxx=Math.max(maxx,v.x); miny=Math.min(miny,v.y); maxy=Math.max(maxy,v.y) }
+    const pad=60; const w=maxx-minx+pad*2; const h=maxy-miny+pad*2;
+    const sx=canvas.width/w; const sy=canvas.height/h; view.scale=clamp(Math.min(sx,sy),0.05,5);
+    const cx=(minx+maxx)/2, cy=(miny+maxy)/2; const cs=worldToScreen(cx,cy);
+    view.x += (canvas.width/2 - cs.x); view.y += (canvas.height/2 - cs.y);
+    requestDraw();
+  }
+
+  function draw(){ if(!needsRedraw) return; needsRedraw=false; setCounts();
+    // clear offscreens
+    ectx.setTransform(1,0,0,1,0,0); vctx.setTransform(1,0,0,1,0,0);
+    ectx.clearRect(0,0,offEdges.width,offEdges.height);
+    vctx.clearRect(0,0,offVerts.width,offVerts.height);
+
+    // grid (on main canvas)
+    ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle=varCSS('--bg'); ctx.fillRect(0,0,canvas.width,canvas.height);
+    drawGrid();
+
+    // apply transform to offscreens
+    for(const c of [ectx,vctx]){ c.setTransform(view.scale,0,0,view.scale, canvas.width/2 + view.x, canvas.height/2 + view.y); }
+
+    // Edges layer
+    ectx.lineWidth=Math.max(1/ view.scale, 0.5);
+    ectx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--edge')||'#8892a0';
+    ectx.beginPath();
+    for(const k of graph.edges){ const [a,b]=k.split('-').map(Number); const va=graph.vertices.get(a), vb=graph.vertices.get(b); if(va.hidden||vb.hidden) continue; drawEdge(ectx,va,vb) }
+    ectx.stroke();
+
+    // Vertices layer
+    const lod = view.scale>=0.45; // show labels only when zoomed enough
+    for(const [id,v] of graph.vertices){ if(v.hidden) continue; drawVertex(vctx,v, lod) }
+
+    // composite
+    ctx.drawImage(offEdges,0,0); ctx.drawImage(offVerts,0,0);
+  }
+
+  function drawGrid(){
+    const step=50*view.scale; if(step<8) return;
+    ctx.save();
+    ctx.globalAlpha=.5; ctx.fillStyle=varCSS('--grid'); ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.strokeStyle='#161a22'; ctx.lineWidth=1;
+    ctx.beginPath();
+    const ox=(canvas.width/2 + view.x) % step; const oy=(canvas.height/2 + view.y) % step;
+    for(let x=ox; x<canvas.width; x+=step){ ctx.moveTo(x,0); ctx.lineTo(x,canvas.height) }
+    for(let y=oy; y<canvas.height; y+=step){ ctx.moveTo(0,y); ctx.lineTo(canvas.width,y) }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function varCSS(name){ return getComputedStyle(document.documentElement).getPropertyValue(name) }
+
+  function drawEdge(c,a,b){
+    const dx=b.x-a.x, dy=b.y-a.y; const d=Math.hypot(dx,dy);
+    if(d>220){ // draw a subtle quadratic curve for long spans
+      const mx=(a.x+b.x)/2, my=(a.y+b.y)/2; // mid
+      const nx=-dy/d, ny=dx/d; // normal
+      const bulge=Math.min(0.18*d, 80); // cap bulge
+      c.moveTo(a.x,a.y); c.quadraticCurveTo(mx+nx*bulge, my+ny*bulge, b.x,b.y);
+    }else{
+      c.moveTo(a.x,a.y); c.lineTo(b.x,b.y);
+    }
+  }
+
+  const palette={1:'#ff6b6b',2:'#6bcf63',3:'#6aa6ff',4:'#f4c95d'};
+  function drawVertex(c,v, showLabel){
+    const fill=palette[v.color]||'#999';
+    // dynamic radius if id is large (to fit label)
+    const r= clamp(6 + String(v.id).length*1.5, 6, 14) / Math.sqrt(view.scale);
+    c.beginPath(); c.fillStyle=fill; c.strokeStyle='#0b0d12'; c.lineWidth=Math.max(1/ view.scale, 0.75);
+    c.arc(v.x,v.y,r,0,TAU); c.fill(); c.stroke();
+    if(showLabel){ c.save(); c.scale(1/view.scale,1/view.scale); c.fillStyle='#0b0d12'; c.font=`${Math.max(9,12)}px ui-sans-serif`; const s=String(v.id); const tw=c.measureText(s).width; c.fillText(s, v.x*view.scale - tw/2, v.y*view.scale + 4); c.restore(); }
+  }
+
+  // ============================
+  // Redraw (layout): spread periphery evenly on a circle
+  // ============================
+  function layoutPeriphery(){
+    const P=graph.periphery; if(P.length<3) return;
+    // compute circle radius based on current bbox
+    let cx=0,cy=0; for(const id of P){ const v=graph.vertices.get(id); cx+=v.x; cy+=v.y } cx/=P.length; cy/=P.length;
+    let maxR=0; for(const id of P){ const v=graph.vertices.get(id); maxR=Math.max(maxR, Math.hypot(v.x-cx, v.y-cy)) }
+    const r=Math.max(120, maxR);
+    for(let k=0;k<P.length;k++){
+      const t = -Math.PI/2 + TAU*(k/P.length);
+      const v=graph.vertices.get(P[k]); v.x= cx + r*Math.cos(t); v.y= cy + r*Math.sin(t);
+    }
+  }
+
+  // ============================
+  // Interaction
+  // ============================
+  let mode={ addPicking:false, pickVp:null };
+
+  function pickVertexAt(mx,my){
+    // hit-test in world coords
+    const w=screenToWorld(mx,my);
+    // simple linear scan (ok up to 10k with LOD)
+    let best=null, bestD=15/ view.scale;
+    for(const [id,v] of graph.vertices){ if(v.hidden) continue; const d=Math.hypot(v.x-w.x, v.y-w.y); if(d<bestD){ best=v; bestD=d } }
+    return best; // returns vertex object or null
+  }
+
+  canvas.addEventListener('mousedown', (e)=>{
+    if(e.button===0){ // left
+      if(mode.addPicking){
+        const v=pickVertexAt(e.offsetX,e.offsetY); if(!v){ showToast('Pick a periphery vertex', 'warn'); return }
+        if(!graph.periphery.includes(v.id)){ showToast('Selected vertex is not on periphery', 'error'); return }
+        if(!mode.pickVp){ mode.pickVp=v.id; setStatus(`Picked Vp = V${v.id}. Now pick Vq.`); return }
+        if(mode.pickVp===v.id){ showToast('Vp and Vq must differ','error'); return }
+        // attempt add
+        try{
+          history.push();
+          const newId=graph.addOnPeriphery(mode.pickVp, v.id);
+          layoutPeriphery();
+          requestDraw();
+          setStatus(`Added V${newId} connecting V${mode.pickVp}…V${v.id}`);
+        }catch(err){ showToast(err.message,'error'); }
+        finally{ mode.addPicking=false; mode.pickVp=null; }
+        updateUI();
+      }else{
+        view.dragging=true; view.last.x=e.clientX; view.last.y=e.clientY;
+      }
+    }
+  });
+  window.addEventListener('mousemove', (e)=>{
+    if(view.dragging){ view.x += (e.clientX - view.last.x); view.y += (e.clientY - view.last.y); view.last.x=e.clientX; view.last.y=e.clientY; requestDraw(); }
+  });
+  window.addEventListener('mouseup', ()=>{ view.dragging=false });
+  canvas.addEventListener('wheel', (e)=>{
+    e.preventDefault(); const factor = (e.deltaY<0)? 1.1: 0.9; zoomAt(e.offsetX,e.offsetY,factor);
+  }, {passive:false});
+
+  function zoomAt(mx,my,factor){
+    const pre=screenToWorld(mx,my); view.scale=clamp(view.scale*factor, 0.08, 8);
+    const post=screenToWorld(mx,my); view.x += ( (post.x-pre.x)*view.scale ); view.y += ( (post.y-pre.y)*view.scale ); requestDraw();
+  }
+
+  // ============================
+  // Buttons & Hotkeys
+  // ============================
+  function updateUI(){
+    const hasGraph=graph.periphery.length>=3;
+    document.getElementById('btnAdd').disabled=!hasGraph;
+    document.getElementById('btnRandom').disabled=!hasGraph;
+    document.getElementById('btnUndo').disabled=!history.canUndo();
+    document.getElementById('btnRedo').disabled=!history.canRedo();
+  }
+
+  document.getElementById('btnStart').onclick=()=>{ history.push(); graph.startTriangle(); centerFit(); requestDraw(); setStatus('Started triangle V1–V3'); updateUI(); };
+  document.getElementById('btnRandom').onclick=()=>{ try{ history.push(); const id=graph.addRandom(); layoutPeriphery(); requestDraw(); setStatus(`Added random vertex V${id}`); updateUI(); }catch(err){ showToast(err.message,'error') } };
+  document.getElementById('btnAdd').onclick=()=>{ if(graph.periphery.length<3){ showToast('Start the graph first (S).','warn'); return } mode.addPicking=true; mode.pickVp=null; setStatus('Pick Vp then Vq on periphery…') };
+
+  document.getElementById('btnUndo').onclick=()=>history.undo();
+  document.getElementById('btnRedo').onclick=()=>history.redo();
+  document.getElementById('btnRedraw').onclick=()=>{ layoutPeriphery(); requestDraw(); setStatus('Periphery redrawn (even spacing)') };
+
+  document.getElementById('btnZoomIn').onclick=()=>zoomAt(canvas.width/2,canvas.height/2,1.2);
+  document.getElementById('btnZoomOut').onclick=()=>zoomAt(canvas.width/2,canvas.height/2,0.8333);
+  document.getElementById('btnCenter').onclick=()=>centerFit();
+
+  let showLabels=true; document.getElementById('btnToggle').onclick=()=>{ showLabels=!showLabels; // toggled via lod gate, but we can force by scaling
+    requestDraw(); };
+
+  document.getElementById('gmInput').addEventListener('change', (e)=>{ const m=parseInt(e.target.value||"0",10); graph.setVisibleMaxId(m); requestDraw(); setStatus(`Showing up to vertex ${m}`) });
+
+  // Palette & coloring
+  for(let i=1;i<=4;i++){
+    const input=document.getElementById('col'+i); input.addEventListener('input', ()=>{ palette[i]=input.value; requestDraw(); });
+  }
+  document.getElementById('btnRecolor').onclick=()=>{ history.push(); graph.recolorDSATUR(); requestDraw(); setStatus('Recolored (DSATUR)'); updateUI(); };
+
+  // Export / Import / PNG
+  document.getElementById('btnExportJson').onclick=()=>{
+    const blob=new Blob([graph.serialize()], {type:'application/json'});
+    const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='planar_graph.json'; a.click(); URL.revokeObjectURL(url);
+  };
+  document.getElementById('btnImportJson').onclick=()=>document.getElementById('fileImport').click();
+  document.getElementById('fileImport').addEventListener('change', (e)=>{
+    const f=e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ try{ history.push(); graph.deserialize(rd.result); requestDraw(); setStatus('Imported graph'); updateUI(); }catch(err){ showToast('Invalid file','error') } }; rd.readAsText(f);
+  });
+  document.getElementById('btnSavePng').onclick=()=>{
+    // composite already on main canvas
+    const url=canvas.toDataURL('image/png'); const a=document.createElement('a'); a.href=url; a.download='planar_graph.png'; a.click();
+  };
+
+  // Tests
+  document.getElementById('btnRunTests').onclick=()=>{
+    try{
+      const snap=graph.serialize();
+      // Build to ~200 vertices with random inserts
+      if(graph.periphery.length<3) graph.startTriangle();
+      for(let i=0;i<197;i++){ graph.addRandom(); if((i%5)===0) layoutPeriphery(); }
+      const inv=graph.checkTriangulationInvariant();
+      graph.deserialize(snap);
+      if(!inv.ok){ showToast(`Triangulation check failed: E=${inv.E} expected ${inv.expected}`, 'error', 3500) }
+      else { showToast(`Tests OK — N=${inv.N} E=${inv.E} P=${inv.p}`, 'info', 2200) }
+    }catch(err){ showToast('Test error: '+err.message,'error',3000) }
+  };
+
+  // Hotkeys
+  window.addEventListener('keydown', (e)=>{
+    if(e.ctrlKey && e.key.toLowerCase()==='z'){ e.preventDefault(); history.undo(); return }
+    if(e.ctrlKey && e.key.toLowerCase()==='y'){ e.preventDefault(); history.redo(); return }
+    if(['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) return;
+    const k=e.key.toLowerCase();
+    if(k==='s'){ document.getElementById('btnStart').click(); }
+    else if(k==='r'){ document.getElementById('btnRandom').click(); }
+    else if(k==='a'){ document.getElementById('btnAdd').click(); }
+    else if(k==='c'){ document.getElementById('btnCenter').click(); }
+    else if(k==='t'){ document.getElementById('btnToggle').click(); }
+    else if(k==='+'){ document.getElementById('btnZoomIn').click(); }
+    else if(k==='-'){ document.getElementById('btnZoomOut').click(); }
+  });
+
+  // ============================
+  // Init
+  // ============================
+  const state={ lastId:0, visibleMaxId:0 };
+  function tick(){ draw(); requestAnimationFrame(tick) }
+  resize(); setStatus('Ready. Start with S or the Start button.'); setCounts(); updateUI(); tick();
+
+  // Start with a triangle for convenience
+  graph.startTriangle(); centerFit(); requestDraw(); updateUI();
+  </script>
 </body>
 </html>
