@@ -251,36 +251,6 @@
             border-left: 4px solid var(--secondary);
         }
         
-        .tab-container {
-            margin-top: 1rem;
-        }
-        
-        .tabs {
-            display: flex;
-            border-bottom: 1px solid #ddd;
-            margin-bottom: 1rem;
-        }
-        
-        .tab {
-            padding: 0.5rem 1rem;
-            cursor: pointer;
-            border-bottom: 3px solid transparent;
-        }
-        
-        .tab.active {
-            border-bottom-color: var(--secondary);
-            color: var(--secondary);
-            font-weight: 500;
-        }
-        
-        .tab-content {
-            display: none;
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
-        
         .tooltip {
             position: absolute;
             background-color: rgba(0, 0, 0, 0.8);
@@ -388,6 +358,15 @@
                     </div>
                     <button id="resetViewBtn" class="btn btn-block btn-warning">Reset View</button>
                 </div>
+
+                <div class="instructions">
+                    <h3>Instructions:</h3>
+                    <p>1. Click "Add Vertex" then click on canvas to add vertices</p>
+                    <p>2. Click "Add Edge" then select two vertices to connect</p>
+                    <p>3. Click "Triangulate" to create a triangulated graph</p>
+                    <p>4. Use "Color Graph" to apply coloring</p>
+                    <p>5. Pan by dragging, zoom with mouse wheel or buttons</p>
+                </div>
             </div>
             
             <div class="canvas-container">
@@ -403,8 +382,29 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Canvas setup
+        // Graph data structure
+        let graph = {
+            vertices: [],
+            edges: [],
+            triangles: []
+        };
+        
+        // View state
+        let viewState = {
+            scale: 1,
+            offsetX: 0,
+            offsetY: 0,
+            lastX: 0,
+            lastY: 0,
+            dragging: false,
+            mode: 'select',
+            selectedVertex: null,
+            hoverVertex: null,
+            lastSelectedVertex: null
+        };
+        
+        // Initialize the application
+        function init() {
             const canvas = document.getElementById('graphCanvas');
             const ctx = canvas.getContext('2d');
             const tooltip = document.getElementById('tooltip');
@@ -418,59 +418,6 @@
             
             window.addEventListener('resize', resizeCanvas);
             resizeCanvas();
-            
-            // Graph data structure
-            let graph = {
-                vertices: [],
-                edges: [],
-                triangles: []
-            };
-            
-            // View state
-            let viewState = {
-                scale: 1,
-                offsetX: 0,
-                offsetY: 0,
-                lastX: 0,
-                lastY: 0,
-                dragging: false,
-                mode: 'select', // Modes: select, addVertex, addEdge
-                selectedVertex: null,
-                hoverVertex: null
-            };
-            
-            // Initialize with a sample graph
-            function initSampleGraph() {
-                graph.vertices = [
-                    { id: 1, x: 400, y: 300, color: null, label: '1' },
-                    { id: 2, x: 500, y: 200, color: null, label: '2' },
-                    { id: 3, x: 600, y: 300, color: null, label: '3' },
-                    { id: 4, x: 500, y: 400, color: null, label: '4' }
-                ];
-                
-                graph.edges = [
-                    { v1: 1, v2: 2 },
-                    { v1: 2, v2: 3 },
-                    { v1: 3, v2: 4 },
-                    { v1: 4, v2: 1 },
-                    { v1: 1, v2: 3 }
-                ];
-                
-                graph.triangles = [
-                    { v1: 1, v2: 2, v3: 3 },
-                    { v1: 1, v2: 3, v3: 4 }
-                ];
-                
-                updateCounts();
-                drawGraph();
-            }
-            
-            // Update status counts
-            function updateCounts() {
-                document.getElementById('vertexCountDisplay').textContent = graph.vertices.length;
-                document.getElementById('edgeCountDisplay').textContent = graph.edges.length;
-                document.getElementById('triangleCountDisplay').textContent = graph.triangles.length;
-            }
             
             // Draw the graph
             function drawGraph() {
@@ -682,13 +629,11 @@
                         v2: graph.vertices[i+1].id,
                         v3: graph.vertices[i+2].id
                     });
-                }
-                
-                // Add edges for the triangles
-                for (const triangle of graph.triangles) {
-                    addEdge(triangle.v1, triangle.v2);
-                    addEdge(triangle.v2, triangle.v3);
-                    addEdge(triangle.v3, triangle.v1);
+                    
+                    // Add edges for the triangle
+                    addEdge(graph.vertices[i].id, graph.vertices[i+1].id);
+                    addEdge(graph.vertices[i+1].id, graph.vertices[i+2].id);
+                    addEdge(graph.vertices[i+2].id, graph.vertices[i].id);
                 }
                 
                 setStatusMessage("Graph triangulated");
@@ -743,6 +688,13 @@
                 drawGraph();
             }
             
+            // Update status counts
+            function updateCounts() {
+                document.getElementById('vertexCountDisplay').textContent = graph.vertices.length;
+                document.getElementById('edgeCountDisplay').textContent = graph.edges.length;
+                document.getElementById('triangleCountDisplay').textContent = graph.triangles.length;
+            }
+            
             // Set status message
             function setStatusMessage(message) {
                 document.getElementById('statusMessage').textContent = message;
@@ -751,6 +703,32 @@
                 setTimeout(() => {
                     document.getElementById('statusMessage').textContent = "Ready";
                 }, 3000);
+            }
+            
+            // Initialize with a sample graph
+            function initSampleGraph() {
+                graph.vertices = [
+                    { id: 1, x: 400, y: 300, color: null, label: '1' },
+                    { id: 2, x: 500, y: 200, color: null, label: '2' },
+                    { id: 3, x: 600, y: 300, color: null, label: '3' },
+                    { id: 4, x: 500, y: 400, color: null, label: '4' }
+                ];
+                
+                graph.edges = [
+                    { v1: 1, v2: 2 },
+                    { v1: 2, v2: 3 },
+                    { v1: 3, v2: 4 },
+                    { v1: 4, v2: 1 },
+                    { v1: 1, v2: 3 }
+                ];
+                
+                graph.triangles = [
+                    { v1: 1, v2: 2, v3: 3 },
+                    { v1: 1, v2: 3, v3: 4 }
+                ];
+                
+                updateCounts();
+                drawGraph();
             }
             
             // Event Listeners
@@ -900,15 +878,15 @@
                 
                 // Add some random edges
                 for (let i = 0; i < count * 1.5; i++) {
-                    const v1 = Math.floor(Math.random() * graph.vertices.length) + 1;
-                    let v2 = Math.floor(Math.random() * graph.vertices.length) + 1;
+                    const v1 = Math.floor(Math.random() * graph.vertices.length);
+                    let v2 = Math.floor(Math.random() * graph.vertices.length);
                     
                     // Ensure v2 is different from v1
                     while (v2 === v1) {
-                        v2 = Math.floor(Math.random() * graph.vertices.length) + 1;
+                        v2 = Math.floor(Math.random() * graph.vertices.length);
                     }
                     
-                    addEdge(v1, v2);
+                    addEdge(graph.vertices[v1].id, graph.vertices[v2].id);
                 }
                 
                 setStatusMessage("Random graph generated with " + count + " vertices");
@@ -958,7 +936,10 @@
             // Initialize with a sample graph
             initSampleGraph();
             setStatusMessage("Welcome to PLANAR. Loaded sample graph.");
-        });
+        }
+        
+        // Initialize the application when the page loads
+        document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
